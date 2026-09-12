@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#16130f"/>
+  <rect x="1" y="1" width="1198" height="628" fill="none" stroke="#3a3226" stroke-width="2"/>
+
+  <g transform="translate(90,195)">
+    <rect width="240" height="240" rx="44" fill="#16130f"/>
+    <rect x="8" y="8" width="224" height="224" rx="36" fill="none" stroke="#3a3226" stroke-width="6"/>
+    <text x="120" y="176" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="700" fill="#c99a44" text-anchor="middle">V</text>
+  </g>
+
+  <text x="378" y="292" font-family="-apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-size="58" font-weight="700" fill="#ece4d3">Nf3t's Valhiem Tools</text>
+
+  <text x="378" y="350" font-family="-apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-size="28" fill="#a89a80">
+    <tspan x="378" dy="0">Parses and displays Valheim .fch character files</tspan>
+    <tspan x="378" dy="38">entirely in your browser.</tspan>
+  </text>
+</svg>
