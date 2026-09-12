@@ -124,6 +124,8 @@
   }
   .cell-owner.player-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
   .cell-owner.player-link:hover { text-decoration: underline solid; }
+  .cell-steam-id a { color: var(--accent); text-decoration: underline dotted; }
+  .cell-steam-id a:hover { text-decoration: underline solid; }
   .level-wrap { display: flex; align-items: center; gap: 0.5rem; }
   .barwrap { background: var(--panel-alt); border-radius: 4px; overflow: hidden; height: 8px; width: 100%; min-width: 80px; }
   .bar { background: var(--accent); height: 100%; }
@@ -1697,7 +1699,20 @@
         const row = clone("tpl-row-player");
         row.querySelector(".cell-name").textContent = name;
         row.querySelector(".cell-id").textContent = id;
-        row.querySelector(".cell-steam-id").textContent = steamId || "—";
+        const steamCell = row.querySelector(".cell-steam-id");
+        if (steamId) {
+          const link = document.createElement("a");
+          // /profiles/<id64> resolves for any Steam64 ID; /id/<name> only
+          // works for a custom vanity URL, which isn't something this save
+          // ever records.
+          link.href = "https://steamcommunity.com/profiles/" + steamId;
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.textContent = steamId;
+          steamCell.appendChild(link);
+        } else {
+          steamCell.textContent = "—";
+        }
         return row;
       },
       { searchPlaceholder: "Filter players…" }
