@@ -1,0 +1,13 @@
+{
+  "name": "nf3t-valheim-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Parses and displays Valheim .fch character files entirely in the browser.",
+  "scripts": {
+    "postinstall": "node scripts/vendor-cytoscape.js",
+    "build": "node scripts/generate-build-info.js"
+  },
+  "dependencies": {
+    "cytoscape": "3.34.2"
+  }
+}

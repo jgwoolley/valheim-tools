@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nf3t's Valhiem Tools</title>
+<meta name="description" content="Parses and displays Valheim .fch character files entirely in your browser.">
+<meta name="theme-color" content="#c99a44">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Valheim Viewer">
+<style>
+  :root {
+    --bg: #16130f;
+    --panel: #201b15;
+    --panel-alt: #241f16;
+    --border: #3a3226;
+    --text: #ece4d3;
+    --muted: #a89a80;
+    --accent: #c99a44;
+    --accent2: #7a6032;
+    --danger: #c15b4a;
+    --info: #c99a44;
+    --info-bg: #241d12;
+    --ok: #6fa06a;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.4;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.55rem; }
+  .app-icon { width: 1.7em; height: 1.7em; flex-shrink: 0; }
+  .subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
+  #dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    color: var(--muted);
+    background: var(--panel);
+  }
+  #dropzone.drag { border-color: var(--accent); background: var(--panel-alt); color: var(--text); }
+  #dropzone strong { color: var(--text); }
+  #fileInput { display: none; }
+  #meta { margin: 1rem 0; font-size: 0.85rem; color: var(--muted); font-family: var(--mono); }
+  #errors, #notes { margin: 1rem 0; }
+  .error {
+    background: #241512; border: 1px solid var(--danger); color: #f2beb3;
+    padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
+  }
+  .note {
+    background: var(--info-bg); border: 1px solid var(--accent2); color: #e8d9b8;
+    padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
+  }
+  #output { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+  }
+  .card h2 {
+    margin: 0 0 0.9rem;
+    font-size: 1rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card h2 .count { color: var(--muted); font-weight: normal; font-size: 0.8rem; }
+  .section-desc { margin: -0.4rem 0 0.9rem; font-size: 0.85rem; color: var(--muted); }
+  .world-card { background: var(--panel-alt); margin-bottom: 0.75rem; }
+  .world-card h2 { font-size: 0.9rem; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .tile {
+    background: var(--panel-alt);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+  }
+  .tile .label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
+  .tile .value { font-size: 1.15rem; font-weight: 600; margin-top: 0.15rem; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .03em; }
+  tr:last-child td { border-bottom: none; }
+  tr.jumpable { cursor: pointer; }
+  tr.jumpable:hover td { background: var(--panel-alt); color: var(--accent); }
+  tr.row-flash td { animation: row-flash 1.5s ease-out; }
+  @keyframes row-flash {
+    0% { background: var(--accent); color: #16130f; }
+    100% { background: transparent; }
+  }
+  .cell-owner.player-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
+  .cell-owner.player-link:hover { text-decoration: underline solid; }
+  .level-wrap { display: flex; align-items: center; gap: 0.5rem; }
+  .barwrap { background: var(--panel-alt); border-radius: 4px; overflow: hidden; height: 8px; width: 100%; min-width: 80px; }
+  .bar { background: var(--accent); height: 100%; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(255,255,255,.2); }
+  .empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+  details > summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+  .strings-scroll { max-height: 320px; overflow-y: auto; margin-top: 0.5rem; }
+  .hexdump {
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    background: var(--panel-alt); padding: 0.7rem; border-radius: 8px;
+    overflow-x: auto; white-space: pre;
+  }
+  .mono { font-family: var(--mono); }
+  .checksum-text { font-size: 0.75rem; word-break: break-all; }
+  .stat-subheading { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin: 1rem 0 0.4rem; }
+  .stat-subheading:first-child { margin-top: 0; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 0.9rem; margin-top: 0.6rem; font-size: 0.78rem; color: var(--muted); }
+  .pagination button {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer;
+  }
+  .pagination button:hover:not(:disabled) { border-color: var(--accent); }
+  .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .list-search {
+    display: block; width: 100%; box-sizing: border-box; margin-bottom: 0.6rem;
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.45rem 0.7rem; border-radius: 6px; font-size: 0.85rem;
+  }
+  .list-search:focus { outline: none; border-color: var(--accent); }
+  .section-nav { display: flex; align-items: center; gap: 0.6rem; }
+  .section-nav button {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;
+  }
+  .section-nav button:hover:not(:disabled) { border-color: var(--accent); }
+  .section-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #resetBtn {
+    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
+  }
+  #resetBtn:hover { border-color: var(--accent); }
+  .toprow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .picker-bar {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.75rem 1rem;
+  }
+  #worldPanel > .picker-bar { margin-bottom: 1rem; }
+  .picker-bar label { color: var(--muted); font-size: 0.85rem; }
+  .picker-bar select {
+    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 200px;
+  }
+  .pin-map-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.72rem; color: var(--muted); margin: 0.6rem 0 0.5rem; align-items: center; }
+  .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .legend-home { background: #c99a44; }
+  .legend-spawn { background: #6fa06a; }
+  .legend-logout { background: #6a8caf; }
+  .legend-death { background: #c15b4a; }
+  .legend-pin { background: #cbb999; }
+  .legend-auto { background: #4a4033; }
+  .pin-map { height: 380px; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; }
+  .pin-map-hint { color: var(--muted); font-size: 0.72rem; margin: -0.35rem 0 0.75rem; }
+  .credits {
+    margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.78rem; line-height: 1.6;
+  }
+  .credits a { color: var(--accent); }
+  .credits ul { margin: 0.4rem 0; padding-left: 1.2rem; }
+  .credits li { margin-bottom: 0.3rem; }
+  .build-info { margin-top: 0.75rem; color: var(--muted); font-size: 0.72rem; }
+  .build-info a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1><img src="icon.svg" alt="" class="app-icon">Nf3t's Valhiem Tools</h1>
+<p class="subtitle">Drop a <span class="mono">.fch</span> character save file to inspect its contents. Parsing happens entirely in your browser.</p>
+
+<div id="dropzone">
+  <div><strong>Click to choose files</strong> or drag & drop them here</div>
+  <div style="margin-top:.4rem; font-size:.8rem;">Expects a Valheim <span class="mono">.fch</span> character file</div>
+  <input type="file" id="fileInput" accept=".fch">
+</div>
+
+<div id="findFileHelp" style="margin-top: 0.75rem;">
+  <p style="margin: 0 0 0.5rem; font-weight: 600;">Where do I find my character file?</p>
+  <table style="margin-top: 0.6rem;">
+    <tbody>
+      <tr><td style="white-space:nowrap;">Windows (Steam)</td><td class="mono">%AppData%\LocalLow\IronGate\Valheim\characters_local\</td></tr>
+      <tr><td style="white-space:nowrap;">macOS (native Steam/App Store build)</td><td class="mono">~/Library/Application Support/IronGate/Valheim/characters_local/</td></tr>
+      <tr><td style="white-space:nowrap;">Linux (native)</td><td class="mono">~/.config/unity3d/IronGate/Valheim/characters_local/</td></tr>
+      <tr><td style="white-space:nowrap;">Steam Deck / Linux (Proton)</td><td class="mono">~/.local/share/Steam/steamapps/compatdata/892970/pfx/drive_c/users/steamuser/AppData/LocalLow/IronGate/Valheim/characters_local/</td></tr>
+    </tbody>
+  </table>
+  <p style="color: var(--muted); font-size: 0.78rem; margin: 0.6rem 0 0;">Older saves may use a folder named <span class="mono">characters</span> instead of <span class="mono">characters_local</span> — check both if one doesn't exist. If you're running Valheim on Mac through Whisky/CrossOver instead of the native build, look inside that compatibility layer's emulated <span class="mono">AppData</span> folder using the Windows path above.</p>
+</div>
+
+<div class="toprow">
+  <div id="meta"></div>
+  <button id="resetBtn" style="display:none;">Clear current file</button>
+</div>
+
+<div id="notes"></div>
+<div id="errors"></div>
+<div id="output"></div>
+
+<footer class="credits">
+  <p>Valheim's <span class="mono">.fch</span>/<span class="mono">.fwl</span> save format isn't officially documented, and the 1.0 release changed it enough that even community references are out of date. This viewer wouldn't exist without:</p>
+  <ul>
+    <li><a href="https://github.com/Kakoen/valheim-save-tools" target="_blank" rel="noopener">Kakoen/valheim-save-tools</a> — a Java library whose <span class="mono">ZPackage</span>/<span class="mono">WorldPlayerData</span>/<span class="mono">PlayerData</span> source was the primary reference for the binary layout this tool implements.</li>
+    <li><a href="https://github.com/cquaid/valheim-fch-editor" target="_blank" rel="noopener">cquaid/valheim-fch-editor</a> — an earlier field-by-field format write-up that provided the starting map before it was cross-checked against a real, newer save file.</li>
+    <li><a href="https://js.cytoscape.org/" target="_blank" rel="noopener">Cytoscape.js</a> — powers the per-world pin map.</li>
+    <li>A decompiled <span class="mono">PlayerProfile.cs</span>, contributed by a project maintainer from their own legally-owned Valheim install — real ground truth that resolved most of the guesswork above (see README.md).</li>
+  </ul>
+  <p>See <span class="mono">README.md</span> in this project for how the format gaps were actually tracked down, and <span class="mono">REVERSE_ENGINEERING_FROM_SOURCE.md</span> for what it'd take to confirm the rest against Valheim's own C# source.</p>
+</footer>
+
+<footer id="buildInfo" class="build-info"></footer>
+
+<!-- ==================== HTML <template> fragments ====================
+     Every repeated UI shape (a stat tile, a table row, a chip, a card...)
+     lives here as inert markup. JS clones the relevant template and fills
+     in the blanks with textContent/DOM APIs instead of building HTML
+     strings, so user-derived text (item names, player names, etc.) can
+     never be interpreted as markup. -->
+
+<template id="tpl-tile">
+  <div class="tile"><div class="label"></div><div class="value"></div></div>
+</template>
+
+<template id="tpl-swatch">
+  <span class="swatch"></span>
+</template>
+
+<template id="tpl-card">
+  <div class="card"><h2><span class="title-text"></span> <span class="count"></span></h2><p class="section-desc"></p><div class="card-body"></div></div>
+</template>
+
+<template id="tpl-empty">
+  <p class="empty"></p>
+</template>
+
+<template id="tpl-note">
+  <div class="note"></div>
+</template>
+
+<template id="tpl-error">
+  <div class="error"></div>
+</template>
+
+
+<template id="tpl-table-skills">
+  <table><thead><tr><th>Skill</th><th>ID</th><th>Level</th><th>Accumulator</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-skill">
+  <tr>
+    <td class="cell-name"></td>
+    <td class="mono cell-id"></td>
+    <td><div class="level-wrap"><div class="barwrap"><div class="bar"></div></div><span class="mono cell-level"></span></div></td>
+    <td class="cell-accum"></td>
+  </tr>
+</template>
+
+<template id="tpl-table-inventory">
+  <table><thead><tr><th>Item</th><th>Qty</th><th>Durability</th><th>Slot</th><th>Equipped</th><th>Quality</th><th>Crafted By</th><th>Crafter ID</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-inventory">
+  <tr>
+    <td class="cell-name"></td>
+    <td class="cell-count"></td>
+    <td class="cell-durability"></td>
+    <td class="cell-slot"></td>
+    <td class="cell-equipped"></td>
+    <td class="cell-quality"></td>
+    <td class="cell-crafter"></td>
+    <td class="mono cell-crafter-id"></td>
+  </tr>
+</template>
+
+<template id="tpl-table-stations">
+  <table><thead><tr><th>Station</th><th>Level</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-station">
+  <tr><td class="cell-name"></td><td class="cell-level"></td></tr>
+</template>
+
+<template id="tpl-table-stringlist">
+  <table><tbody></tbody></table>
+</template>
+<template id="tpl-row-stringlist">
+  <tr><td></td></tr>
+</template>
+
+<template id="tpl-table-textmap">
+  <table><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-textmap">
+  <tr><td class="cell-key"></td><td class="cell-value"></td></tr>
+</template>
+
+<template id="tpl-table-food">
+  <table><thead><tr><th>Food</th><th>Time Remaining</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-food">
+  <tr><td class="cell-name"></td><td class="cell-time"></td></tr>
+</template>
+
+<template id="tpl-subheading">
+  <h3 class="stat-subheading"></h3>
+</template>
+
+<template id="tpl-table-namevalue">
+  <table><thead><tr><th class="col-name"></th><th>Value</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-namevalue">
+  <tr><td class="cell-name"></td><td class="cell-value"></td></tr>
+</template>
+
+<template id="tpl-table-players">
+  <table><thead><tr><th>Player Name</th><th>Player ID</th><th>Steam ID</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-player">
+  <tr><td class="cell-name"></td><td class="mono cell-id"></td><td class="mono cell-steam-id"></td></tr>
+</template>
+
+<template id="tpl-table-toc">
+  <table><thead><tr><th>Section</th><th>Description</th></tr></thead><tbody></tbody></table>
+</template>
+
+<template id="tpl-world-select-bar">
+  <div class="picker-bar">
+    <label for="worldSelect">World</label>
+    <select id="worldSelect"></select>
+  </div>
+</template>
+
+<template id="tpl-world-card">
+  <div class="card world-card">
+    <h2 class="world-title"></h2>
+    <table><tbody class="world-points"></tbody></table>
+    <div class="pin-map-legend">
+      <span><span class="legend-dot legend-home"></span>Home</span>
+      <span><span class="legend-dot legend-spawn"></span>Spawn / Respawn</span>
+      <span><span class="legend-dot legend-logout"></span>Last Logout</span>
+      <span><span class="legend-dot legend-death"></span>Last Death</span>
+      <span><span class="legend-dot legend-pin"></span>Player Pin</span>
+      <span><span class="legend-dot legend-auto"></span>Game Marker</span>
+    </div>
+    <div class="pin-map"></div>
+    <p class="pin-map-hint">Scroll to zoom, drag to pan. Positions use each point's real in-game X/Z coordinates, so distances are relative and to scale.</p>
+    <h3 class="pins-heading stat-subheading"></h3>
+    <div class="pins-body-wrap"></div>
+  </div>
+</template>
+<template id="tpl-table-pins">
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Label</th><th colspan="3">Location</th>
+        <th rowspan="2">Type</th><th rowspan="2">Checked</th><th rowspan="2">Placed By</th><th rowspan="2">Owner ID</th>
+      </tr>
+      <tr><th>X</th><th>Y</th><th>Z</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</template>
+<template id="tpl-world-point-row">
+  <tr><td class="cell-label"></td><td class="mono cell-value" colspan="3"></td></tr>
+</template>
+<template id="tpl-row-pin">
+  <tr>
+    <td class="cell-name"></td>
+    <td class="mono cell-x"></td>
+    <td class="mono cell-y"></td>
+    <td class="mono cell-z"></td>
+    <td class="cell-type"></td>
+    <td class="cell-checked"></td>
+    <td class="cell-owner"></td>
+    <td class="mono cell-owner-id"></td>
+  </tr>
+</template>
+
+<template id="tpl-leftover">
+  <div>
+    <p class="empty leftover-intro"></p>
+    <details class="strings-details" open hidden>
+      <summary class="strings-summary"></summary>
+      <div class="strings-scroll"></div>
+    </details>
+    <details class="hex-details" style="margin-top:.75rem;">
+      <summary>Raw hex dump</summary>
+      <div class="hexdump"></div>
+    </details>
+  </div>
+</template>
+<template id="tpl-table-leftover-strings">
+  <table><thead><tr><th>Text</th><th>Count</th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-leftover-string">
+  <tr><td class="cell-text"></td><td class="cell-count"></td></tr>
+</template>
+
+<template id="tpl-checksum">
+  <p class="mono checksum-text"></p>
+</template>
+
+<template id="tpl-section-selector">
+  <div class="picker-bar">
+    <label for="sectionSelect">Section</label>
+    <select id="sectionSelect"></select>
+    <span class="section-nav">
+      <button type="button" data-action="prev-section">◀ Prev</button>
+      <button type="button" data-action="next-section">Next ▶</button>
+    </span>
+  </div>
+</template>
+
+<template id="tpl-pagination">
+  <div class="pagination">
+    <button type="button" data-action="prev">◀ Prev</button>
+    <span class="page-info"></span>
+    <button type="button" data-action="next">Next ▶</button>
+  </div>
+</template>
+
+<!-- Used only for the per-world pin map (a spatial scatter plot of pins and
+     spawn/logout/death/home points, positioned by their real in-game X/Z
+     coordinates — no graph edges are drawn). Vendored locally (see
+     scripts/vendor-cytoscape.js — runs automatically via `npm install`)
+     rather than loaded from a CDN, so this page never depends on a
+     third-party site to work. -->
+<script src="vendor/cytoscape.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Lookup tables ----------
+
+  /** Maps Valheim's internal `Skills.SkillType` enum values to display names. @type {Object<number,string>} */
+  const SKILL_NAMES = {
+    0: "None", 1: "Swords", 2: "Knives", 3: "Clubs", 4: "Polearms", 5: "Spears",
+    6: "Blocking", 7: "Axes", 8: "Bows", 9: "Elemental Magic", 10: "Blood Magic",
+    11: "Unarmed", 12: "Pickaxes", 13: "Wood Cutting", 14: "Crossbows",
+    100: "Jump", 101: "Sneak", 102: "Run", 103: "Swim", 104: "Fishing",
+    105: "Cooking", 106: "Farming", 107: "Crafting", 108: "Dodge", 110: "Ride",
+    999: "All"
+  };
+  /** Maps the player model index to a display name. @type {Object<number,string>} */
+  const BODY_TYPES = { 0: "Male", 1: "Female" };
+
+  // ---------- Binary reader (little-endian, .NET BinaryWriter conventions) ----------
+
+  /**
+   * A bounds-checked, position-tracking reader over an ArrayBuffer, matching
+   * the little-endian primitive layout and 7-bit string-length encoding that
+   * Valheim's `ZPackage` (a thin wrapper around .NET's `BinaryWriter`) uses.
+   * Every read method throws `RangeError` on truncated/out-of-bounds data so
+   * callers can catch it and stop gracefully instead of returning garbage.
+   */
+  class Reader {
+    /**
+     * @param {ArrayBuffer} buffer - Backing buffer to read from.
+     * @param {number} [byteOffset] - Offset of the readable window within `buffer`.
+     * @param {number} [byteLength] - Length of the readable window.
+     */
+    constructor(buffer, byteOffset, byteLength) {
+      /** @type {DataView} */
+      this.view = new DataView(buffer, byteOffset || 0, byteLength);
+      /** @type {Uint8Array} */
+      this.bytes = new Uint8Array(buffer, byteOffset || 0, byteLength);
+      /** Current read cursor, in bytes from the start of the window. @type {number} */
+      this.pos = 0;
+    }
+    /** @returns {number} Bytes left to read before the end of the window. */
+    remaining() { return this.view.byteLength - this.pos; }
+    /**
+     * @param {number} n - Number of bytes about to be read.
+     * @throws {RangeError} If fewer than `n` bytes remain.
+     */
+    need(n) { if (this.remaining() < n) throw new RangeError("unexpected end of data (need " + n + " bytes, have " + this.remaining() + ")"); }
+    /** @returns {number} An unsigned byte, advancing the cursor by 1. */
+    u8() { this.need(1); const v = this.view.getUint8(this.pos); this.pos += 1; return v; }
+    /** @returns {boolean} A byte read as a boolean (non-zero = true). */
+    bool() { return this.u8() !== 0; }
+    /** @returns {number} A little-endian unsigned 16-bit integer, advancing the cursor by 2. */
+    u16() { this.need(2); const v = this.view.getUint16(this.pos, true); this.pos += 2; return v; }
+    /** @returns {number} A little-endian signed 32-bit integer, advancing the cursor by 4. */
+    i32() { this.need(4); const v = this.view.getInt32(this.pos, true); this.pos += 4; return v; }
+    /** @returns {bigint} A little-endian signed 64-bit integer, advancing the cursor by 8. */
+    i64() { this.need(8); const v = this.view.getBigInt64(this.pos, true); this.pos += 8; return v; }
+    /** @returns {number} A little-endian 32-bit float, advancing the cursor by 4. */
+    f32() { this.need(4); const v = this.view.getFloat32(this.pos, true); this.pos += 4; return v; }
+    /**
+     * @param {number} n - Number of bytes to copy out.
+     * @returns {Uint8Array} A copy of the next `n` bytes, advancing the cursor by `n`.
+     */
+    slice(n) { this.need(n); const v = this.bytes.slice(this.pos, this.pos + n); this.pos += n; return v; }
+    /** @returns {[number, number, number]} Three consecutive floats, e.g. a world-space position. */
+    vec3() { return [this.f32(), this.f32(), this.f32()]; }
+    /**
+     * Reads a .NET `BinaryWriter`-style string: a 7-bit encoded length
+     * prefix (continuation bit in the high bit of each byte) followed by
+     * that many UTF-8 bytes.
+     * @returns {string} The decoded string.
+     */
+    str() {
+      let len = 0, shift = 0, b;
+      do {
+        b = this.u8();
+        len |= (b & 0x7f) << shift;
+        shift += 7;
+      } while (b & 0x80);
+      const bytes = this.slice(len);
+      return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    }
+    /**
+     * Reads Valheim's compact item/custom-data count encoding
+     * (`ZPackage.ReadNumItems`, confirmed against `ItemDrop.ItemData.Save`):
+     * one byte, or — if its high bit is set — that byte's low 7 bits as the
+     * high byte of a 15-bit value, followed by one more byte. Different
+     * from {@link str}'s length prefix (which continues for as many bytes
+     * as needed); this one is capped at exactly two.
+     * @returns {number}
+     */
+    numItems() {
+      let n = this.u8();
+      if (n & 0x80) n = ((n & 0x7f) << 8) | this.u8();
+      return n;
+    }
+  }
+
+  /**
+   * Decompresses a gzip-compressed byte array using the browser's native
+   * `DecompressionStream`, avoiding any external dependency.
+   * @param {Uint8Array} bytes - Gzip-compressed bytes.
+   * @returns {Promise<Uint8Array>} The decompressed bytes.
+   * @throws {Error} If `DecompressionStream` isn't available in this browser.
+   */
+  async function gunzip(bytes) {
+    if (typeof DecompressionStream === "undefined") {
+      throw new Error("gzip decompression (DecompressionStream) isn't supported in this browser");
+    }
+    const ds = new DecompressionStream("gzip");
+    const stream = new Blob([bytes]).stream().pipeThrough(ds);
+    const buf = await new Response(stream).arrayBuffer();
+    return new Uint8Array(buf);
+  }
+
+  /**
+   * Formats a number for display, or an em dash if it isn't a finite number.
+   * @param {number} n
+   * @param {number} [d] - Decimal places (default 2).
+   * @returns {string}
+   */
+  function fmtFloat(n, d) {
+    if (typeof n !== "number" || !isFinite(n)) return "—";
+    return n.toFixed(d === undefined ? 2 : d);
+  }
+
+  /**
+   * Renders a classic hex + ASCII side-by-side dump of a byte range, capped
+   * to `maxBytes` to keep huge unparsed regions from freezing the page.
+   * @param {Uint8Array} bytes
+   * @param {number} [maxBytes]
+   * @returns {string} Plain-text hex dump (intended for `textContent`, not `innerHTML`).
+   */
+  function hexDump(bytes, maxBytes) {
+    const n = Math.min(bytes.length, maxBytes || 512);
+    let lines = [];
+    for (let i = 0; i < n; i += 16) {
+      const chunk = bytes.slice(i, i + 16);
+      const hex = Array.from(chunk).map(b => b.toString(16).padStart(2, "0")).join(" ");
+      const ascii = Array.from(chunk).map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : ".").join("");
+      lines.push(i.toString(16).padStart(6, "0") + "  " + hex.padEnd(47, " ") + "  " + ascii);
+    }
+    if (bytes.length > n) lines.push("... (" + (bytes.length - n) + " more bytes)");
+    return lines.join("\n");
+  }
+
+  /**
+   * Scans a byte range for runs of printable ASCII (length >= `minLen`) and
+   * tallies how often each distinct string occurs. Used as a human-readable
+   * fallback view over data this viewer can't structurally decode.
+   * @param {Uint8Array} bytes
+   * @param {number} minLen - Minimum run length to count as a "string".
+   * @param {number} maxUnique - Cap on the number of distinct strings returned.
+   * @returns {{entries: Array<[string, number]>, total: number, truncated: boolean}}
+   *   `entries` is sorted by descending count and capped to `maxUnique`;
+   *   `total` is the true number of distinct strings found.
+   */
+  function extractStrings(bytes, minLen, maxUnique) {
+    const counts = new Map();
+    let i = 0;
+    const n = bytes.length;
+    while (i < n) {
+      if (bytes[i] >= 32 && bytes[i] < 127) {
+        let j = i;
+        while (j < n && bytes[j] >= 32 && bytes[j] < 127) j++;
+        if (j - i >= minLen) {
+          const s = new TextDecoder().decode(bytes.slice(i, j));
+          counts.set(s, (counts.get(s) || 0) + 1);
+        }
+        i = j;
+      } else {
+        i++;
+      }
+    }
+    const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const truncated = entries.length > maxUnique;
+    return { entries: entries.slice(0, maxUnique), total: entries.length, truncated };
+  }
+
+  /**
+   * @param {number} v
+   * @param {number} [bound] - Symmetric bound to consider "reasonable" (default 1e6).
+   * @returns {boolean} True if `v` is a finite number within +/- `bound`.
+   */
+  function isReasonableFloat(v, bound) {
+    bound = bound === undefined ? 1e6 : bound;
+    return typeof v === "number" && isFinite(v) && Math.abs(v) <= bound;
+  }
+
+  // ---------- Resync: locate the world list without assuming fixed offsets ----------
+  // Valheim's 1.0 release added new per-character fields between the basic
+  // stats and the world list that aren't publicly documented. Rather than
+  // hard-coding their size (which breaks on every future save-format change),
+  // we scan forward for the first position where "world count + N valid world
+  // headers" checks out, and treat everything before it as an opaque skipped
+  // region.
+
+  /**
+   * Dry-runs (without decompressing map data) the fixed-size portion of one
+   * `WorldPlayerData` entry starting at `pos`, to check whether that position
+   * plausibly begins a real world header.
+   * @param {DataView} view - View over the whole data segment.
+   * @param {number} pos - Candidate start offset of the world entry (right after its UID... no, at the UID itself).
+   * @param {number} version - The character file's overall save version (gates optional fields).
+   * @param {number} limit - Exclusive upper bound on readable offsets.
+   * @returns {{end: number, nonTrivial: boolean}|null}
+   *   `end` is the offset just past this world entry if valid, `nonTrivial` is
+   *   true if any field wasn't just a zero/false placeholder (used to reject
+   *   accidental matches inside runs of zero bytes); `null` if invalid.
+   */
+  function dryValidateWorld(view, pos, version, limit) {
+    try {
+      let p = pos;
+      let nonTrivial = false;
+      if (p + 8 > limit) return null;
+      const uidHi = view.getUint32(p, true), uidLo = view.getUint32(p + 4, true);
+      if (uidHi !== 0 || uidLo !== 0) nonTrivial = true;
+      p += 8; // world UID
+      const b1 = view.getUint8(p); p += 1;
+      if (b1 !== 0 && b1 !== 1) return null;
+      if (b1) nonTrivial = true;
+      for (let i = 0; i < 3; i++) { const v = view.getFloat32(p, true); if (!isReasonableFloat(v)) return null; if (v !== 0) nonTrivial = true; p += 4; }
+      const b2 = view.getUint8(p); p += 1;
+      if (b2 !== 0 && b2 !== 1) return null;
+      if (b2) nonTrivial = true;
+      for (let i = 0; i < 3; i++) { const v = view.getFloat32(p, true); if (!isReasonableFloat(v)) return null; if (v !== 0) nonTrivial = true; p += 4; }
+      if (version >= 30) {
+        const b3 = view.getUint8(p); p += 1;
+        if (b3 !== 0 && b3 !== 1) return null;
+        if (b3) nonTrivial = true;
+        for (let i = 0; i < 3; i++) { const v = view.getFloat32(p, true); if (!isReasonableFloat(v)) return null; if (v !== 0) nonTrivial = true; p += 4; }
+      }
+      for (let i = 0; i < 3; i++) { const v = view.getFloat32(p, true); if (!isReasonableFloat(v)) return null; if (v !== 0) nonTrivial = true; p += 4; }
+      if (version >= 29) {
+        if (p + 1 > limit) return null;
+        const bMap = view.getUint8(p); p += 1;
+        if (bMap !== 0 && bMap !== 1) return null;
+        if (bMap === 1) {
+          nonTrivial = true;
+          if (p + 4 > limit) return null;
+          const objLen = view.getInt32(p, true); p += 4;
+          if (objLen < 0 || p + objLen > limit) return null;
+          p += objLen; // trust the length prefix; contents verified later
+        }
+      }
+      if (p > limit) return null;
+      return { end: p, nonTrivial };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Scans forward from `r.pos` for the first position where an
+   * `int32` world count followed by that many valid world headers checks
+   * out, skipping over any not-yet-understood data in between.
+   * @param {Reader} r - Reader positioned right after the basic stats header.
+   * @param {number} version - The character file's overall save version.
+   * @returns {{offset: number, numWorlds: number, skipped: number}|null}
+   *   `offset` is where the world count itself begins; `skipped` is how many
+   *   bytes were skipped to get there. `null` if no plausible world list was found.
+   */
+  function resyncToWorlds(r, version) {
+    const limit = r.view.byteLength;
+    const start = r.pos;
+    if (start + 4 <= limit && r.view.getInt32(start, true) === 0) {
+      return { offset: start, numWorlds: 0, skipped: 0 };
+    }
+    let fallback = null;
+    for (let off = start; off + 4 <= limit; off++) {
+      const numWorlds = r.view.getInt32(off, true);
+      if (numWorlds < 1 || numWorlds > 32) continue;
+      let p = off + 4;
+      let ok = true;
+      let anyNonTrivial = false;
+      for (let w = 0; w < numWorlds; w++) {
+        const step = dryValidateWorld(r.view, p, version, limit);
+        if (step === null) { ok = false; break; }
+        if (step.nonTrivial) anyNonTrivial = true;
+        p = step.end;
+      }
+      if (!ok) continue;
+      const candidate = { offset: off, numWorlds, skipped: off - start };
+      if (anyNonTrivial) return candidate;
+      if (!fallback) fallback = candidate;
+    }
+    return fallback;
+  }
+
+  // ---------- Section parsers ----------
+
+  /**
+   * Parses one `WorldPlayerData` entry: spawn/logout/death/home points and,
+   * if present, its gzip-compressed minimap (explored %, and pins with
+   * placer Steam name).
+   * @param {Reader} r - Positioned at the start of the world entry (its UID).
+   * @param {number} version - The character file's overall save version.
+   * @returns {Promise<object>} The parsed world entry.
+   */
+  async function parseWorldReal(r, version) {
+    const w = {};
+    w.uid = r.i64().toString();
+    w.haveSpawn = r.bool();
+    w.spawn = r.vec3();
+    w.hasLogout = r.bool();
+    w.logout = r.vec3();
+    if (version >= 30) {
+      w.hasDeath = r.bool();
+      w.death = r.vec3();
+    }
+    w.home = r.vec3();
+    if (version >= 29) {
+      w.haveMap = r.bool();
+      if (w.haveMap) {
+        const objLen = r.i32();
+        const objStart = r.pos;
+        try {
+          const mapVersion = r.i32();
+          w.mapVersion = mapVersion;
+          if (mapVersion >= 7) {
+            const compSize = r.i32();
+            const compBytes = r.slice(compSize);
+            const raw = await gunzip(compBytes);
+            const mv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+            let mp = 0;
+            const textureSize = mv.getInt32(mp, true); mp += 4;
+            const gridLen = textureSize * textureSize;
+            w.textureSize = textureSize;
+            if (gridLen >= 0 && mp + gridLen <= raw.length) {
+              let exploredCount = 0;
+              for (let i = 0; i < gridLen; i++) if (raw[mp + i] !== 0) exploredCount++;
+              w.exploredPercent = gridLen ? (exploredCount / gridLen * 100) : 0;
+              mp += gridLen;
+              if (mapVersion >= 5) mp += gridLen; // exploredOthers grid, not shown
+              if (mapVersion >= 2) {
+                const pinCount = mv.getInt32(mp, true); mp += 4;
+                w.pins = [];
+                for (let i = 0; i < pinCount && mp < raw.length; i++) {
+                  let len = 0, shift = 0, b;
+                  do { b = raw[mp]; mp += 1; len |= (b & 0x7f) << shift; shift += 7; } while (b & 0x80);
+                  const nameBytes = raw.slice(mp, mp + len); mp += len;
+                  const name = new TextDecoder("utf-8", { fatal: false }).decode(nameBytes);
+                  const px = mv.getFloat32(mp, true); mp += 4;
+                  const py = mv.getFloat32(mp, true); mp += 4;
+                  const pz = mv.getFloat32(mp, true); mp += 4;
+                  const pinType = mv.getInt32(mp, true); mp += 4;
+                  let checked = false;
+                  if (mapVersion >= 3) { checked = raw[mp] !== 0; mp += 1; }
+                  let ownerId, ownerName;
+                  if (mapVersion >= 6) { ownerId = mv.getBigInt64(mp, true).toString(); mp += 8; }
+                  if (mapVersion >= 8) {
+                    // Newer than the last publicly-documented map version (7): an
+                    // owner display name string was added after ownerId. In
+                    // practice this is often just "Steam_<id>", not a real
+                    // display name — see resolvePinOwners(), which
+                    // cross-references ownerId against inventory crafterIDs
+                    // (which do carry a real name) to improve on it.
+                    let nlen = 0, nshift = 0, nb;
+                    do { nb = raw[mp]; mp += 1; nlen |= (nb & 0x7f) << nshift; nshift += 7; } while (nb & 0x80);
+                    ownerName = new TextDecoder("utf-8", { fatal: false }).decode(raw.slice(mp, mp + nlen));
+                    mp += nlen;
+                  }
+                  w.pins.push({ name, pos: [px, py, pz], pinType, checked, ownerId, ownerName });
+                }
+              }
+              if (mapVersion >= 4 && mp < raw.length) {
+                w.visibleToOthers = raw[mp] !== 0; mp += 1;
+              }
+            }
+          }
+        } catch (e) {
+          w.mapError = e.message;
+        }
+        r.pos = objStart + objLen; // always resync to the declared object boundary
+      }
+    }
+    return w;
+  }
+
+  /**
+   * Parses the player name/ID/seed header that follows the world list.
+   * (The `havePlayerData` flag comes later, after `usedCheats`/`dateCreated`
+   * — see {@link parseCharacterFile} — confirmed against Valheim's own
+   * decompiled `PlayerProfile.LoadPlayerFromDisk`.)
+   * @param {Reader} r
+   * @returns {{name: string, id: string, seed: string}}
+   */
+  function parsePlayerHeader(r) {
+    const name = r.str();
+    const id = r.i64().toString();
+    const seed = r.str();
+    return { name, id, seed };
+  }
+
+  /**
+   * Reads a `count`-prefixed list of strings (Valheim's `Set<string>` wire format).
+   * @param {Reader} r
+   * @param {number} [cap] - Sanity cap on `count` to reject corrupt data early.
+   * @returns {string[]}
+   */
+  function parseStringList(r, cap) {
+    const count = r.i32();
+    if (count < 0 || count > (cap || 500000)) throw new RangeError("implausible list count " + count);
+    const list = [];
+    for (let i = 0; i < count; i++) list.push(r.str());
+    return list;
+  }
+
+  /**
+   * Reads a `count`-prefixed list of (string, string) pairs into a plain object.
+   * @param {Reader} r
+   * @param {number} [cap]
+   * @returns {Object<string,string>}
+   */
+  function parseStringMap(r, cap) {
+    const count = r.i32();
+    if (count < 0 || count > (cap || 500000)) throw new RangeError("implausible map count " + count);
+    const map = {};
+    for (let i = 0; i < count; i++) { const k = r.str(); const v = r.str(); map[k] = v; }
+    return map;
+  }
+
+  /**
+   * Reads the "known crafting stations" list: `count` * (name, level).
+   * @param {Reader} r
+   * @returns {Array<{name: string, level: number}>}
+   */
+  function parseStations(r) {
+    const count = r.i32();
+    if (count < 0 || count > 500000) throw new RangeError("implausible station count " + count);
+    const list = [];
+    for (let i = 0; i < count; i++) list.push({ name: r.str(), level: r.i32() });
+    return list;
+  }
+
+
+  /**
+   * Reads the "active food" list: `count` * (name, time-remaining).
+   * Confirmed against `Player.Load`: current saves only write `name` +
+   * `m_time` per entry (the old `health`/`stamina`-per-food layout was
+   * replaced before this version).
+   * @param {Reader} r
+   * @returns {Array<{name: string, time: number}>}
+   */
+  function parseFoods(r) {
+    const count = r.i32();
+    if (count < 0 || count > 10000) throw new RangeError("implausible food count " + count);
+    const list = [];
+    for (let i = 0; i < count; i++) list.push({ name: r.str(), time: r.f32() });
+    return list;
+  }
+
+  /**
+   * Valheim's `StringExtensionMethods.GetStableHashCode()` — a DJB2-family
+   * hash used throughout the engine for ZDOs and, as of inventory version
+   * 109, item identity. Verified against the reference implementation in
+   * Kakoen/valheim-save-tools' `StableHashCode.java` (itself ported from
+   * decompiled Valheim source), not derived from ours.
+   * @param {string} str
+   * @returns {number} A signed 32-bit hash.
+   */
+  function getStableHashCode(str) {
+    let hash1 = 5381, hash2 = 5381;
+    for (let i = 0; i < str.length; i += 2) {
+      const c0 = str.charCodeAt(i);
+      if (c0 === 0) break;
+      hash1 = (((hash1 << 5) + hash1) ^ c0) | 0;
+      if (i !== str.length - 1 && str.charCodeAt(i + 1) !== 0) {
+        hash2 = (((hash2 << 5) + hash2) ^ str.charCodeAt(i + 1)) | 0;
+      } else {
+        break;
+      }
+    }
+    return (hash1 + Math.imul(hash2, 1566083941)) | 0;
+  }
+
+  /**
+   * Reads one `ItemDrop.ItemData`, confirmed against `ItemData.Save`/`Load`:
+   * a compact, bit-flag-packed layout (inventory version 109) that replaced
+   * the old plain name+count+durability+... fields entirely. Item identity
+   * is now a stable hash of the prefab name (see {@link getStableHashCode})
+   * rather than a string, so it can't be displayed directly — see
+   * {@link resolveItemNames} for how this viewer recovers names anyway.
+   * @param {Reader} r
+   * @returns {object}
+   */
+  function parseItemData(r) {
+    const durability = r.i32() / 100;
+    const gridX = r.u8();
+    const gridY = r.u8();
+    const worldLevel = r.u8();
+    const flags = r.u8();
+    const pickedUp = !!(flags & 1);
+    const equipped = !!(flags & 2);
+    const quality = (flags & 4) ? r.u16() : 1;
+    const stack = (flags & 8) ? r.u16() : 1;
+    const variant = (flags & 16) ? r.i32() : 0;
+    let crafterID = "0", crafterName = "";
+    if (flags & 32) { crafterID = r.i64().toString(); crafterName = r.str(); }
+    const prefabHash = (flags & 64) ? r.i32() : 0;
+    let customData = {};
+    if (flags & 128) {
+      const n = r.numItems();
+      for (let i = 0; i < n; i++) { const k = r.str(); const v = r.str(); customData[k] = v; }
+    }
+    const cheated = !!(r.u8() & 1);
+    return { prefabHash, durability, gridX, gridY, worldLevel, pickedUp, equipped, quality, stack, variant, crafterID, crafterName, customData, cheated };
+  }
+
+  /**
+   * Reads the player's inventory: a version int, a `ushort` item count
+   * (confirmed against `Inventory.Save` — not an `int32`, which is what
+   * previously made counts come out as nonsense), then that many items.
+   * @param {Reader} r
+   * @returns {{version: number, items: object[]}}
+   */
+  function parseInventory(r) {
+    const version = r.i32();
+    const count = r.u16();
+    const items = [];
+    for (let i = 0; i < count; i++) items.push(parseItemData(r));
+    return { version, items };
+  }
+
+  /**
+   * Converts a localization token like `$item_axe_stone` to the PascalCase
+   * form Valheim's actual prefab GameObjects are named (`AxeStone`), which
+   * is what {@link getStableHashCode} is actually computed from — the
+   * localization token itself never matches. Verified empirically: hashing
+   * `"AxeStone"` reproduces a real item hash found in a live save.
+   * @param {string} token
+   * @returns {string}
+   */
+  function tokenToPascalCase(token) {
+    const stripped = token.replace(/^\$(item|piece|enemy)_/, "");
+    return stripped.split("_").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join("");
+  }
+
+  /**
+   * Item entries only carry a stable hash of their prefab name (see
+   * {@link getStableHashCode}), not the name itself — but plenty of *other*
+   * fields already decoded elsewhere in this same save (crafting/pickup
+   * stats, known recipes/materials, active food, piece-placement stats)
+   * name the same prefabs, just as localization tokens or, for foraged
+   * resources, already in prefab form. This hashes every such candidate —
+   * both as-is and PascalCased via {@link tokenToPascalCase} — and mutates
+   * each inventory item with a `resolvedName` wherever one matches, purely
+   * from names already present in the player's own data (no external item
+   * database involved). Items crafted or dropped by a *different* player
+   * (this file has some — see `crafterName`) generally won't resolve, since
+   * their pickup/craft events aren't in this character's own stats.
+   * @param {object} result - The in-progress parse result (`data.playerStats`, `data.playerData`, etc. read from it).
+   */
+  function resolveItemNames(result) {
+    const d = result.data;
+    const pd = d.playerData;
+    if (!pd || !pd.inventory || !pd.inventory.items.length) return;
+    const candidates = new Set();
+    const addAll = (obj) => { if (obj) for (const k of Object.keys(obj)) candidates.add(k); };
+    const addList = (list) => { if (list) for (const s of list) candidates.add(s); };
+    (d.playerStats || []).forEach(block => {
+      addAll(block.itemPickupStats);
+      addAll(block.itemCraftStats);
+      addAll(block.pickableStats);
+      addAll(block.foodEatenStats);
+      addAll(block.piecesPlacedStats);
+    });
+    addList(pd.knownRecipes);
+    addList(pd.knownMaterials);
+    if (pd.knownStations) for (const s of pd.knownStations) candidates.add(s.name);
+    (pd.foods || []).forEach(f => candidates.add(f.name));
+
+    const hashToName = new Map();
+    for (const name of candidates) {
+      hashToName.set(getStableHashCode(name), name);
+      const pascal = tokenToPascalCase(name);
+      if (pascal !== name) hashToName.set(getStableHashCode(pascal), pascal);
+    }
+
+    pd.inventory.items.forEach(it => {
+      if (it.prefabHash && hashToName.has(it.prefabHash)) it.resolvedName = hashToName.get(it.prefabHash);
+    });
+  }
+
+  /**
+   * Map pins only carry a numeric `ownerId` (a Steam64-shaped ID) plus an
+   * `ownerName` that the game itself often just formats as `"Steam_<id>"` —
+   * not a real display name. Inventory items crafted by that same player
+   * *do* carry a real name (`crafterName`, stored as a plain string
+   * alongside their own `crafterID`), so this cross-references the two:
+   * any pin whose `ownerId` matches an inventory item's `crafterID` gets a
+   * `resolvedOwnerName` from that item — including your own pins, since
+   * your own crafted items carry your own ID too.
+   * @param {object} result - The in-progress parse result.
+   */
+  function resolvePinOwners(result) {
+    const d = result.data;
+    const pd = d.playerData;
+    if (!pd || !pd.inventory || !d.worlds) return;
+    const idToName = {};
+    pd.inventory.items.forEach(it => {
+      if (it.crafterID && it.crafterID !== "0" && it.crafterName) idToName[it.crafterID] = it.crafterName;
+    });
+    if (!Object.keys(idToName).length) return;
+    d.worlds.forEach(w => {
+      (w.pins || []).forEach(p => {
+        if (p.ownerId && idToName[p.ownerId]) p.resolvedOwnerName = idToName[p.ownerId];
+      });
+    });
+  }
+
+  /**
+   * Parses the "live player data" block (present only when `havePlayerData`
+   * is true): vitals, inventory, all the discovery/progress lists,
+   * appearance, active food, and skills.
+   * @param {Reader} r
+   * @returns {object} The parsed player data.
+   */
+  function parsePlayerData(r) {
+    const version = r.i32();
+    const pd = { version };
+    if (version >= 7) pd.maxHealth = r.f32();
+    pd.health = r.f32();
+    if (version >= 10) pd.stamina = r.f32();
+    // No firstSpawn bool here (confirmed against PlayerProfile.cs — it's a
+    // top-level PlayerProfile field now, exposed as result.data.firstSpawn,
+    // not part of this inner Player-data blob at all).
+    if (version >= 20) pd.timeSinceDeath = r.f32();
+    if (version >= 23) pd.guardianPower = r.str();
+    if (version >= 24) pd.guardianPowerCooldown = r.f32();
+    // Everything above this point is confirmed correct against a real save
+    // (version/health/stamina/guardianPower all decode to plausible,
+    // verified values). Everything below is Kakoen's pre-1.0 Inventory/
+    // Player layout, which no longer matches a current save: item entries
+    // don't decode as name+count+durability+... at all here — item
+    // identifiers appear to be encoded differently now (a stable hash
+    // rather than a plain string is one live hypothesis), which needs
+    // Inventory.cs/ItemDrop.cs source to pin down (PlayerProfile.cs doesn't
+    // cover it). Wrapped so a failure here doesn't discard the fields above
+    // that we DO know are right.
+    try {
+      pd.inventory = parseInventory(r);
+      pd.knownRecipes = parseStringList(r);
+      pd.knownStations = parseStations(r);
+      pd.knownMaterials = parseStringList(r);
+      pd.shownTutorials = parseStringList(r);
+      pd.uniques = parseStringList(r);
+      pd.trophies = parseStringList(r);
+      // Confirmed against Player.cs: on a current save, m_knownBiome is a
+      // plain Set<string> of biome names (e.g. "Meadows"), not the int
+      // biome-flag IDs an older format used.
+      pd.knownBiomes = parseStringList(r);
+      pd.knownTexts = parseStringMap(r);
+      pd.beardItem = r.str();
+      pd.hairItem = r.str();
+      pd.skinColor = r.vec3();
+      pd.hairColor = r.vec3();
+      pd.modelIndex = r.i32();
+      pd.foods = parseFoods(r);
+      const skillsVersion = r.i32();
+      const skillCount = r.i32();
+      if (skillCount < 0 || skillCount > 10000) throw new RangeError("implausible skill count " + skillCount);
+      const skills = [];
+      for (let i = 0; i < skillCount; i++) skills.push({ type: r.i32(), level: r.f32(), accumulator: r.f32() });
+      pd.skillsVersion = skillsVersion;
+      pd.skills = skills;
+      pd.customData = {};
+      if (version >= 26) {
+        pd.customData = parseStringMap(r);
+        pd.stamina2 = r.f32();
+        pd.maxEitr = r.f32();
+        pd.eitr = r.f32();
+      }
+      // Confirmed against Player.cs: Save() always writes a build-menu UI
+      // state blob last (ZPackage.Write(byte[]), so int32 length + raw
+      // bytes) — Load() gates reading it on a version threshold this
+      // sample's version (33) clears. Not meaningful to display, but must
+      // be consumed to reach the true end of this blob.
+      r.slice(r.i32());
+    } catch (e) {
+      pd.decodeError = "Inventory/appearance/skills use a newer format this viewer doesn't have source for yet — stopped at: " + e.message;
+      pd.leftoverBytes = r.bytes.slice(r.pos);
+    }
+    return pd;
+  }
+
+  /**
+   * Reads a `count`-prefixed `Dictionary<string,float>` — Valheim's generic
+   * name -> accumulated-value stat map, confirmed against the decompiled
+   * `PlayerProfile.SavePlayerToDisk`/`LoadPlayerFromDisk` (used for known
+   * worlds, world/story flags, console commands, enemy kills, item
+   * pickups/crafts, foraged resources, foods eaten, and pieces placed).
+   * @param {Reader} r
+   * @param {number} [cap] - Sanity cap on `count` to reject corrupt data early.
+   * @returns {Object<string,number>}
+   */
+  function parseStringFloatMap(r, cap) {
+    const count = r.i32();
+    if (count < 0 || count > (cap || 500000)) throw new RangeError("implausible stat map count " + count);
+    const map = {};
+    for (let i = 0; i < count; i++) { const k = r.str(); const v = r.f32(); map[k] = v; }
+    return map;
+  }
+
+  /**
+   * Reads one `PlayerProfile.PlayerStats` block. Valheim writes 10 of these
+   * per character — index 0 (`c_RawStats`) holds true lifetime totals, and
+   * indices 1-9 are duplicate per-achievement-difficulty-tier copies used
+   * only for achievement tracking, so this viewer only surfaces index 0.
+   * @param {Reader} r
+   * @param {number} numStatTypes - Size of the dense `stats` array (same for every block; the `PlayerStatType` enum's member count).
+   * @returns {object}
+   */
+  function parsePlayerStatsBlock(r, numStatTypes) {
+    const stats = new Array(numStatTypes);
+    for (let i = 0; i < numStatTypes; i++) stats[i] = r.f32();
+    const knownWorlds = parseStringFloatMap(r);
+    const knownWorldKeys = parseStringFloatMap(r);
+    const knownCommands = parseStringFloatMap(r);
+    const enemyStatsGroupCount = r.i32();
+    if (enemyStatsGroupCount < 0 || enemyStatsGroupCount > 100) throw new RangeError("implausible enemy-stat group count " + enemyStatsGroupCount);
+    const enemyStats = [];
+    for (let i = 0; i < enemyStatsGroupCount; i++) enemyStats.push(parseStringFloatMap(r));
+    const itemPickupStats = parseStringFloatMap(r);
+    const itemCraftStats = parseStringFloatMap(r);
+    const pickableStats = parseStringFloatMap(r);
+    const foodEatenStats = parseStringFloatMap(r);
+    const piecesPlacedStats = parseStringFloatMap(r);
+    return { stats, knownWorlds, knownWorldKeys, knownCommands, enemyStats, itemPickupStats, itemCraftStats, pickableStats, foodEatenStats, piecesPlacedStats };
+  }
+
+  // ---------- Top-level parse ----------
+
+  /**
+   * Records how many bytes were actually consumed and, if any remain,
+   * captures them as both a hex dump and an extracted-strings table so the
+   * UI can show a graceful fallback instead of silently dropping data.
+   * @param {{data: object, bytesConsumed?: number, bytesTotal?: number, leftoverBytes?: number, leftoverHex?: string, leftoverStrings?: object}} result
+   * @param {Reader} r
+   */
+  function finalizeLeftover(result, r) {
+    result.bytesConsumed = r.pos;
+    result.bytesTotal = r.view.byteLength;
+    if (r.remaining() > 0) {
+      const rest = r.bytes.slice(r.pos);
+      result.leftoverBytes = rest.length;
+      result.leftoverHex = hexDump(rest, 2048);
+      result.leftoverStrings = extractStrings(rest, 4, 400);
+    }
+  }
+
+  /**
+   * Parses a Valheim `.fch` character file end to end. Never throws for
+   * malformed/unrecognized data past the outer container — instead it
+   * records what it could parse, appends human-readable `errors`/`notes`,
+   * and exposes anything left over as hex + extracted strings.
+   * @param {ArrayBuffer} buffer - The raw file contents.
+   * @returns {Promise<{data: object, errors: string[], notes: string[], totalBytes: number}>}
+   */
+  async function parseCharacterFile(buffer) {
+    const result = { data: {}, errors: [], notes: [], totalBytes: buffer.byteLength };
+    const outer = new Reader(buffer);
+
+    let dataBytes;
+    try {
+      const dataSize = outer.i32();
+      dataBytes = outer.slice(dataSize);
+      result.data.dataSize = dataSize;
+    } catch (e) {
+      result.errors.push("Could not read outer data block: " + e.message + ". This may not be a valid .fch file.");
+      return result;
+    }
+
+    try {
+      if (outer.remaining() >= 4) {
+        const checksumSize = outer.i32();
+        if (checksumSize >= 0 && checksumSize <= outer.remaining()) {
+          const checksum = outer.slice(checksumSize);
+          result.data.checksumHex = Array.from(checksum).map(b => b.toString(16).padStart(2, "0")).join("");
+        }
+      }
+    } catch (e) { /* checksum is informational only, ignore failures */ }
+
+    const r = new Reader(dataBytes.buffer, dataBytes.byteOffset, dataBytes.byteLength);
+
+    let version;
+    try {
+      version = r.i32();
+      result.data.version = version;
+    } catch (e) {
+      result.errors.push("Could not read the save version: " + e.message);
+      finalizeLeftover(result, r);
+      return result;
+    }
+
+    // Structural parse of PlayerProfile.SavePlayerToDisk's stats block,
+    // confirmed against Valheim's own decompiled source: an int32 stat-type
+    // count (the PlayerStatType enum's size), an int32 block count (always
+    // 10 — one lifetime-totals block plus 9 per-achievement-difficulty
+    // duplicates), then that many PlayerStats blocks, then a top-level
+    // firstSpawn bool. This is the region earlier versions of this viewer
+    // could only skip over as an opaque, undocumented blob.
+    const afterVersionPos = r.pos;
+    let needsResync = false;
+    try {
+      const numStatTypes = r.i32();
+      const numStatBlocks = r.i32();
+      if (numStatTypes < 0 || numStatTypes > 100000) throw new RangeError("implausible stat-type count " + numStatTypes);
+      if (numStatBlocks < 0 || numStatBlocks > 1000) throw new RangeError("implausible stat-block count " + numStatBlocks);
+      const statsBlocks = [];
+      for (let i = 0; i < numStatBlocks; i++) statsBlocks.push(parsePlayerStatsBlock(r, numStatTypes));
+      result.data.numStatTypes = numStatTypes;
+      result.data.playerStats = statsBlocks;
+      result.data.firstSpawn = r.bool();
+    } catch (e) {
+      result.notes.push("Could not decode the per-character statistics block structurally (" + e.message + "); falling back to scanning ahead for the world list. Player statistics won't be available for this file.");
+      r.pos = afterVersionPos;
+      needsResync = true;
+    }
+
+    if (needsResync) {
+      const worldsInfo = resyncToWorlds(r, version);
+      if (!worldsInfo) {
+        result.errors.push("Could not locate the world list in this file — the save format may have changed further, or this isn't a Valheim character file.");
+        finalizeLeftover(result, r);
+        return result;
+      }
+      if (worldsInfo.skipped > 0) {
+        result.notes.push("Skipped " + worldsInfo.skipped.toLocaleString() + " bytes of data this viewer couldn't otherwise place, to reach the world list.");
+      }
+      r.pos = worldsInfo.offset;
+    }
+
+    const numWorlds = r.i32();
+    const worlds = [];
+    try {
+      for (let i = 0; i < numWorlds; i++) {
+        worlds.push(await parseWorldReal(r, version));
+      }
+      result.data.worlds = worlds;
+    } catch (e) {
+      result.data.worlds = worlds;
+      result.errors.push("Stopped while parsing world #" + (worlds.length + 1) + ": " + e.message);
+      finalizeLeftover(result, r);
+      return result;
+    }
+
+    try {
+      result.data.playerHeader = parsePlayerHeader(r);
+    } catch (e) {
+      result.errors.push("Could not read the player name/ID/seed after the world list: " + e.message);
+      finalizeLeftover(result, r);
+      return result;
+    }
+
+    // Confirmed against PlayerProfile.SavePlayerToDisk/LoadPlayerFromDisk:
+    // usedCheats and dateCreated sit between startSeed and the
+    // havePlayerData flag — a gap earlier versions of this viewer missed,
+    // which threw off havePlayerData and everything after it.
+    try {
+      result.data.usedCheats = r.bool();
+      result.data.dateCreated = r.i64().toString();
+      const havePlayerData = r.bool();
+      result.data.havePlayerData = havePlayerData;
+      if (havePlayerData) {
+        const pdLen = r.i32();
+        const pdStart = r.pos;
+        try {
+          const sub = new Reader(r.view.buffer, r.view.byteOffset + pdStart, pdLen);
+          result.data.playerData = parsePlayerData(sub);
+          if (result.data.playerData.decodeError) {
+            result.notes.push(result.data.playerData.decodeError + ". Vitals and guardian power above are still accurate; inventory/skills/appearance aren't available for this file — the undecoded bytes are shown further down.");
+            result.data.playerDataLeftoverHex = hexDump(result.data.playerData.leftoverBytes, 2048);
+            result.data.playerDataLeftoverStrings = extractStrings(result.data.playerData.leftoverBytes, 4, 400);
+          }
+          resolveItemNames(result);
+          resolvePinOwners(result);
+        } catch (e) {
+          result.errors.push("Could not read the player-data version header: " + e.message);
+        }
+        r.pos = pdStart + pdLen; // always resync to the declared boundary
+      }
+    } catch (e) {
+      result.errors.push("Could not read profile metadata (used-cheats/created-date/player-data flag) after the world list: " + e.message);
+    }
+
+    finalizeLeftover(result, r);
+    return result;
+  }
+
+  // ---------- Rendering ----------
+  // Every render*() function below returns a detached DOM Node built from a
+  // <template>, never an HTML string — text is always assigned via
+  // `textContent`, so nothing read from the save file can be interpreted as
+  // markup.
+
+  /**
+   * Clones the first element inside a `<template>`.
+   * @param {string} id - The template element's `id` attribute.
+   * @returns {HTMLElement} A detached clone of the template's root element.
+   */
+  function clone(id) {
+    const tpl = document.getElementById(id);
+    return tpl.content.firstElementChild.cloneNode(true);
+  }
+
+  /**
+   * Builds a single label/value stat tile for use inside a `.grid` container.
+   * @param {string} label - Short label shown above the value, e.g. "Health".
+   * @param {string|Node} value - Plain text, or a pre-built node (e.g. a colour swatch).
+   * @returns {HTMLElement}
+   */
+  function tile(label, value) {
+    const el = clone("tpl-tile");
+    el.querySelector(".label").textContent = label;
+    const valueEl = el.querySelector(".value");
+    if (value instanceof Node) valueEl.appendChild(value);
+    else valueEl.textContent = value;
+    return el;
+  }
+
+  /**
+   * Builds a colour swatch followed by its CSS colour string as text, for
+   * skin/hair colour tiles.
+   * @param {string} rgbCss - A CSS `rgb(...)` string.
+   * @returns {HTMLElement}
+   */
+  function swatchValue(rgbCss) {
+    const wrap = document.createElement("span");
+    const sw = clone("tpl-swatch");
+    sw.style.background = rgbCss;
+    wrap.appendChild(sw);
+    wrap.appendChild(document.createTextNode(rgbCss));
+    return wrap;
+  }
+
+  /**
+   * Builds a card: a heading (with an optional "(N)" count) and a body.
+   * @param {string} title - Card heading text.
+   * @param {number|undefined} count - Item count shown next to the heading, or `undefined` to omit it.
+   * @param {Node} body - Content node placed in the card body.
+   * @param {string} [description] - One-sentence explanation shown under the heading; also surfaced in the Table of Contents section.
+   * @returns {HTMLElement}
+   */
+  function card(title, count, body, description) {
+    const el = clone("tpl-card");
+    el.querySelector(".title-text").textContent = title;
+    const countEl = el.querySelector(".count");
+    if (count !== undefined) countEl.textContent = "(" + count + ")";
+    else countEl.remove();
+    const descEl = el.querySelector(".section-desc");
+    if (description) descEl.textContent = description;
+    else descEl.remove();
+    el.querySelector(".card-body").appendChild(body);
+    el.dataset.sectionTitle = title; // used by buildSectionPicker() to build the show/hide list
+    if (description) el.dataset.sectionDescription = description;
+    return el;
+  }
+
+  /**
+   * Builds a muted italic placeholder for empty sections.
+   * @param {string} text
+   * @returns {HTMLElement}
+   */
+  function empty(text) {
+    const el = clone("tpl-empty");
+    el.textContent = text;
+    return el;
+  }
+
+  /** Default number of entries shown per page by {@link buildListView}. */
+  const DEFAULT_PAGE_SIZE = 20;
+
+  /**
+   * Builds a bare single-column `<table>` container — used by
+   * {@link renderStringList} so plain name lists (Known Recipes, Known
+   * Biomes, ...) look and behave like every other table in this viewer,
+   * rather than a distinct chip/pill style.
+   * @returns {{root: HTMLElement, appendTo: HTMLElement}}
+   */
+  function makeStringTableContainer() {
+    const table = clone("tpl-table-stringlist");
+    return { root: table, appendTo: table.querySelector("tbody") };
+  }
+
+  /**
+   * Builds a searchable, paginated collection view — the single primitive
+   * behind every list/table in this viewer. A search box (skipped for
+   * short lists, where it'd be pure clutter) filters entries by a
+   * caller-supplied text extractor; Prev/Next page controls appear only
+   * when the (possibly filtered) results exceed one page.
+   * @template T
+   * @param {T[]} entries - Full, unfiltered data.
+   * @param {(entry: T) => string} searchText - Text checked against the search box (case-insensitive substring match).
+   * @param {() => {root: HTMLElement, appendTo: HTMLElement}} makeContainer - Builds a fresh empty container (e.g. a `<table>` or `<ul>`) each time the visible page changes; `root` is inserted into the page, `appendTo` is where entry elements get appended (a `<tbody>`, or the same as `root` for a plain `<ul>`).
+   * @param {(entry: T) => HTMLElement} renderEntry - Builds one row/item element from one entry.
+   * @param {object} [opts]
+   * @param {number} [opts.pageSize]
+   * @param {string} [opts.searchPlaceholder]
+   * @param {string} [opts.emptyMessage]
+   * @returns {HTMLElement & {jumpTo?: (matchFn: (entry: T) => boolean) => boolean}} The `jumpTo` method
+   *   (absent when `entries` was empty) clears any active search, turns to
+   *   whichever page holds the first entry matching `matchFn`, scrolls it
+   *   into view, and briefly flashes it — used to jump here from elsewhere
+   *   on the page (e.g. clicking a map node, or a "Placed By" name).
+   */
+  function buildListView(entries, searchText, makeContainer, renderEntry, opts) {
+    opts = opts || {};
+    const pageSize = opts.pageSize || DEFAULT_PAGE_SIZE;
+    const wrap = document.createElement("div");
+    if (!entries.length) {
+      wrap.appendChild(empty(opts.emptyMessage || "None recorded."));
+      return wrap;
+    }
+
+    let filtered = entries;
+    let page = 0;
+    let searchInput = null;
+
+    // A search box on a handful of entries is just clutter — only worth
+    // showing once there's actually something to search through.
+    if (entries.length > 8) {
+      searchInput = document.createElement("input");
+      searchInput.type = "search";
+      searchInput.className = "list-search";
+      searchInput.placeholder = opts.searchPlaceholder || "Filter…";
+      wrap.appendChild(searchInput);
+    }
+
+    const bodyWrap = document.createElement("div");
+    wrap.appendChild(bodyWrap);
+
+    function renderBody() {
+      bodyWrap.textContent = "";
+      if (!filtered.length) {
+        bodyWrap.appendChild(empty("No matches."));
+        return;
+      }
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (page >= totalPages) page = totalPages - 1;
+      const { root, appendTo } = makeContainer();
+      const frag = document.createDocumentFragment();
+      filtered.slice(page * pageSize, page * pageSize + pageSize).forEach(e => {
+        const el = renderEntry(e);
+        el.dataset.listIndex = String(entries.indexOf(e));
+        frag.appendChild(el);
+      });
+      appendTo.appendChild(frag);
+      bodyWrap.appendChild(root);
+
+      if (filtered.length > pageSize) {
+        const controls = clone("tpl-pagination");
+        const info = controls.querySelector(".page-info");
+        const prevBtn = controls.querySelector('[data-action="prev"]');
+        const nextBtn = controls.querySelector('[data-action="next"]');
+        info.textContent = "Page " + (page + 1) + " of " + totalPages + " (" + filtered.length + ")";
+        prevBtn.disabled = page === 0;
+        nextBtn.disabled = page === totalPages - 1;
+        prevBtn.addEventListener("click", () => { if (page > 0) { page--; renderBody(); } });
+        nextBtn.addEventListener("click", () => { if (page < totalPages - 1) { page++; renderBody(); } });
+        bodyWrap.appendChild(controls);
+      }
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        const q = searchInput.value.trim().toLowerCase();
+        filtered = q ? entries.filter(e => searchText(e).toLowerCase().includes(q)) : entries;
+        page = 0;
+        renderBody();
+      });
+    }
+    renderBody();
+
+    wrap.jumpTo = (matchFn) => {
+      const idx = entries.findIndex(matchFn);
+      if (idx === -1) return false;
+      if (searchInput) searchInput.value = "";
+      filtered = entries;
+      page = Math.floor(idx / pageSize);
+      renderBody();
+      const rowEl = bodyWrap.querySelector('[data-list-index="' + idx + '"]');
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        rowEl.classList.add("row-flash");
+        setTimeout(() => rowEl.classList.remove("row-flash"), 1500);
+      }
+      return true;
+    };
+
+    return wrap;
+  }
+
+  /**
+   * Builds a searchable, paginated plain list from a list of strings —
+   * used for Known Recipes, Discovered Materials, Known Biomes, Discovered
+   * Uniques, Trophies, Tutorials Seen, and anything else that's just names.
+   * @param {string[]|undefined} list
+   * @param {string} [itemLabel] - Used in the search box's placeholder, e.g. "materials".
+   * @returns {HTMLElement}
+   */
+  function renderStringList(list, itemLabel) {
+    if (!list || !list.length) return empty("None recorded.");
+    return buildListView(
+      list,
+      s => s,
+      makeStringTableContainer,
+      s => { const row = clone("tpl-row-stringlist"); row.querySelector("td").textContent = s; return row; },
+      { searchPlaceholder: "Filter " + (itemLabel || "items") + "…" }
+    );
+  }
+
+  /**
+   * Builds the Overview card body: name, ID, seed, save version, live-data
+   * flag, and the character-profile-level metadata (used-cheats flag,
+   * profile creation date, first-spawn flag) confirmed against
+   * `PlayerProfile.cs` — followed by vitals, appearance, and the checksum.
+   * Vitals/appearance live here (rather than their own section) since both
+   * are short and are really just more character-identity fields.
+   * @param {object} d - `result.data`.
+   * @returns {HTMLElement}
+   */
+  function renderOverview(d) {
+    const wrap = document.createElement("div");
+    const ph = d.playerHeader || {};
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    grid.appendChild(tile("Name", ph.name || "—"));
+    grid.appendChild(tile("Player ID", ph.id || "—"));
+    grid.appendChild(tile("World Seed", ph.seed || "—"));
+    grid.appendChild(tile("Save Format Version", d.version !== undefined ? String(d.version) : "—"));
+    grid.appendChild(tile("Has Live Player Data", d.havePlayerData ? "Yes" : "No"));
+    if (d.usedCheats !== undefined) grid.appendChild(tile("Used Cheats", d.usedCheats ? "Yes" : "No"));
+    if (d.dateCreated !== undefined) grid.appendChild(tile("Profile Created", formatUnixSeconds(d.dateCreated)));
+    if (d.firstSpawn !== undefined) grid.appendChild(tile("First Spawn", d.firstSpawn ? "Yes" : "No"));
+    wrap.appendChild(grid);
+
+    wrap.appendChild(renderVitalsAndAppearance(d.playerData));
+
+    if (d.checksumHex) {
+      wrap.appendChild(subheading("Checksum"));
+      wrap.appendChild(renderChecksum(d.checksumHex));
+    }
+    return wrap;
+  }
+
+  /**
+   * Formats a whole number of seconds as e.g. "3h 12m", "5m 02s", or "42s".
+   * @param {number} totalSeconds
+   * @returns {string}
+   */
+  function formatSeconds(totalSeconds) {
+    const s = Math.max(0, Math.round(totalSeconds));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    if (h > 0) return h + "h " + m + "m";
+    if (m > 0) return m + "m " + String(sec).padStart(2, "0") + "s";
+    return sec + "s";
+  }
+
+  /**
+   * Formats a stat-map value as a plain count when it's a whole number, or
+   * a 1-decimal float otherwise (some of these dictionaries store durations
+   * or fractional amounts, not just event counts).
+   * @param {number} v
+   * @returns {string}
+   */
+  function formatCount(v) {
+    return Number.isInteger(v) ? String(v) : fmtFloat(v, 1);
+  }
+
+  /**
+   * @param {string} unixSecondsStr - Seconds since epoch, as a string (may exceed 2^53 in theory, hence string-typed upstream).
+   * @returns {string} A short localized date, or an em dash if invalid.
+   */
+  function formatUnixSeconds(unixSecondsStr) {
+    const n = Number(unixSecondsStr);
+    if (!isFinite(n)) return "—";
+    try {
+      return new Date(n * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    } catch (e) {
+      return "—";
+    }
+  }
+
+  /**
+   * Builds a small uppercase section heading, used to break up the
+   * Player Statistics card into its sub-lists.
+   * @param {string} text
+   * @returns {HTMLElement}
+   */
+  function subheading(text) {
+    const el = clone("tpl-subheading");
+    el.textContent = text;
+    return el;
+  }
+
+  /**
+   * Builds a generic "name -> value" table, sorted by value descending.
+   * @param {Object<string,number>|undefined} map
+   * @param {string} nameLabel - Header text for the name column, e.g. "World".
+   * @param {(v: number) => string} formatValue
+   * @returns {HTMLElement}
+   */
+  function renderNameValueTable(map, nameLabel, formatValue) {
+    const entries = Object.entries(map || {}).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) return empty("None recorded.");
+    return buildListView(
+      entries,
+      ([k]) => k,
+      () => { const table = clone("tpl-table-namevalue"); table.querySelector(".col-name").textContent = nameLabel; return { root: table, appendTo: table.querySelector("tbody") }; },
+      ([k, v]) => {
+        const row = clone("tpl-row-namevalue");
+        row.querySelector(".cell-name").textContent = k;
+        row.querySelector(".cell-value").textContent = formatValue(v);
+        return row;
+      },
+      { searchPlaceholder: "Filter " + nameLabel.toLowerCase() + "s…" }
+    );
+  }
+
+  /**
+   * Builds the Known Players table from {@link collectKnownPlayers}'s
+   * ID -> {name, steamId} map. Also stashes the resulting list view in
+   * {@link knownPlayersListView} so a "Placed By" click elsewhere can jump
+   * straight to a given player's row.
+   * @param {Map<string,{name: string, steamId: string|undefined}>} players
+   * @returns {HTMLElement}
+   */
+  function renderKnownPlayers(players) {
+    const entries = Array.from(players.entries());
+    if (!entries.length) return empty("None recorded.");
+    const list = buildListView(
+      entries,
+      ([id, { name, steamId }]) => name + " " + id + " " + (steamId || ""),
+      () => { const table = clone("tpl-table-players"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      ([id, { name, steamId }]) => {
+        const row = clone("tpl-row-player");
+        row.querySelector(".cell-name").textContent = name;
+        row.querySelector(".cell-id").textContent = id;
+        row.querySelector(".cell-steam-id").textContent = steamId || "—";
+        return row;
+      },
+      { searchPlaceholder: "Filter players…" }
+    );
+    knownPlayersListView = list;
+    return list;
+  }
+
+  /**
+   * Builds the vitals + appearance portion of the Overview card. Returns an
+   * empty fragment when there's no live player data — the Overview grid's
+   * "Has Live Player Data: No" tile already covers that case.
+   * @param {object|undefined} pd - `result.data.playerData`.
+   * @returns {HTMLElement|DocumentFragment}
+   */
+  function renderVitalsAndAppearance(pd) {
+    if (!pd) return document.createDocumentFragment();
+    const wrap = document.createElement("div");
+
+    wrap.appendChild(subheading("Vitals"));
+    const vitals = document.createElement("div");
+    vitals.className = "grid";
+    vitals.appendChild(tile("Health", fmtFloat(pd.health, 1) + (pd.maxHealth !== undefined ? " / " + fmtFloat(pd.maxHealth, 1) : "")));
+    if (pd.stamina !== undefined) vitals.appendChild(tile("Stamina", fmtFloat(pd.stamina, 1)));
+    if (pd.eitr !== undefined) vitals.appendChild(tile("Eitr", fmtFloat(pd.eitr, 1) + (pd.maxEitr !== undefined ? " / " + fmtFloat(pd.maxEitr, 1) : "")));
+    if (pd.timeSinceDeath !== undefined) vitals.appendChild(tile("Time Since Death", fmtFloat(pd.timeSinceDeath, 0) + "s"));
+    if (pd.guardianPower !== undefined) vitals.appendChild(tile("Guardian Power", pd.guardianPower || "None"));
+    if (pd.guardianPowerCooldown !== undefined) vitals.appendChild(tile("Guardian Power Cooldown", fmtFloat(pd.guardianPowerCooldown, 0) + "s"));
+    wrap.appendChild(vitals);
+
+    if (pd.skinColor !== undefined) {
+      wrap.appendChild(subheading("Appearance"));
+      const cc = pd.skinColor.map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+      const hc = pd.hairColor.map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+      const rgb = arr => "rgb(" + arr.join(",") + ")";
+      const appearance = document.createElement("div");
+      appearance.className = "grid";
+      appearance.appendChild(tile("Body Type", BODY_TYPES[pd.modelIndex] !== undefined ? BODY_TYPES[pd.modelIndex] : ("#" + pd.modelIndex)));
+      appearance.appendChild(tile("Beard", pd.beardItem || "None"));
+      appearance.appendChild(tile("Hair Style", pd.hairItem || "None"));
+      appearance.appendChild(tile("Skin Tone", swatchValue(rgb(cc))));
+      appearance.appendChild(tile("Hair Color", swatchValue(rgb(hc))));
+      wrap.appendChild(appearance);
+    }
+    return wrap;
+  }
+
+  /**
+   * Builds the Skills table, sorted by level descending.
+   * @param {Array<{type: number, level: number, accumulator: number}>|undefined} skills
+   * @returns {HTMLElement}
+   */
+  function renderSkills(skills) {
+    if (!skills || !skills.length) return empty("No trained skills found.");
+    const sorted = skills.slice().sort((a, b) => b.level - a.level);
+    return buildListView(
+      sorted,
+      s => (SKILL_NAMES[s.type] || "") + " " + s.type,
+      () => { const table = clone("tpl-table-skills"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      s => {
+        const row = clone("tpl-row-skill");
+        row.querySelector(".cell-name").textContent = SKILL_NAMES[s.type] || ("Skill #" + s.type);
+        row.querySelector(".cell-id").textContent = String(s.type);
+        const pct = Math.max(0, Math.min(100, s.level));
+        row.querySelector(".bar").style.width = pct + "%";
+        row.querySelector(".cell-level").textContent = fmtFloat(s.level, 2);
+        row.querySelector(".cell-accum").textContent = fmtFloat(s.accumulator, 1);
+        return row;
+      },
+      { searchPlaceholder: "Filter skills…" }
+    );
+  }
+
+  /**
+   * Builds the Inventory table.
+   * @param {{items: object[]}|undefined} inv
+   * @returns {HTMLElement}
+   */
+  function renderInventory(inv) {
+    if (!inv || !inv.items.length) return empty("No inventory items found.");
+    return buildListView(
+      inv.items,
+      it => (it.resolvedName || "Item #" + it.prefabHash) + " " + (it.crafterName || "") + " " + (it.crafterID || ""),
+      () => { const table = clone("tpl-table-inventory"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      it => {
+        const row = clone("tpl-row-inventory");
+        row.querySelector(".cell-name").textContent = it.resolvedName || ("Item #" + it.prefabHash);
+        row.querySelector(".cell-count").textContent = String(it.stack);
+        row.querySelector(".cell-durability").textContent = it.durability !== undefined ? fmtFloat(it.durability, 0) : "—";
+        row.querySelector(".cell-slot").textContent = "(" + it.gridX + ", " + it.gridY + ")";
+        row.querySelector(".cell-equipped").textContent = it.equipped ? "Yes" : "";
+        row.querySelector(".cell-quality").textContent = String(it.quality);
+        row.querySelector(".cell-crafter").textContent = it.crafterName || "—";
+        row.querySelector(".cell-crafter-id").textContent = (it.crafterID && it.crafterID !== "0") ? it.crafterID : "—";
+        return row;
+      },
+      { searchPlaceholder: "Filter inventory…" }
+    );
+  }
+
+  /**
+   * Builds the Known Crafting Stations table.
+   * @param {Array<{name: string, level: number}>|undefined} list
+   * @returns {HTMLElement}
+   */
+  function renderStations(list) {
+    if (!list || !list.length) return empty("None recorded.");
+    return buildListView(
+      list,
+      s => s.name,
+      () => { const table = clone("tpl-table-stations"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      s => {
+        const row = clone("tpl-row-station");
+        row.querySelector(".cell-name").textContent = s.name;
+        row.querySelector(".cell-level").textContent = String(s.level);
+        return row;
+      },
+      { searchPlaceholder: "Filter stations…" }
+    );
+  }
+
+  /**
+   * Builds a generic key/value table, used for the "Known Texts" section.
+   * @param {Object<string,string>|undefined} map
+   * @returns {HTMLElement}
+   */
+  function renderTextMap(map) {
+    const keys = Object.keys(map || {});
+    if (!keys.length) return empty("None recorded.");
+    return buildListView(
+      keys,
+      k => k + " " + map[k],
+      () => { const table = clone("tpl-table-textmap"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      k => {
+        const row = clone("tpl-row-textmap");
+        row.querySelector(".cell-key").textContent = k;
+        row.querySelector(".cell-value").textContent = map[k];
+        return row;
+      },
+      { searchPlaceholder: "Filter texts…" }
+    );
+  }
+
+  /**
+   * Builds the Active Food table.
+   * @param {Array<{name: string, time: number}>} foods
+   * @returns {HTMLElement}
+   */
+  function renderFoods(foods) {
+    if (!foods || !foods.length) return empty("None recorded.");
+    return buildListView(
+      foods,
+      f => f.name,
+      () => { const table = clone("tpl-table-food"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      f => {
+        const row = clone("tpl-row-food");
+        row.querySelector(".cell-name").textContent = f.name;
+        row.querySelector(".cell-time").textContent = formatSeconds(f.time);
+        return row;
+      },
+      { searchPlaceholder: "Filter foods…" }
+    );
+  }
+
+  /**
+   * Builds one world's nested card: name (if resolved) and UID, its
+   * "Playtime" row, and a collapsible table combining the
+   * spawn/logout/death/home points with the world's actual map pins.
+   * @param {object} w - A parsed world entry.
+   * @param {number} index - Zero-based index, used for the "World N" heading.
+   * @param {Object<string,string>} [worldNames] - Map of world UID -> name, from {@link withSelfKnownWorldName}.
+   * @param {Object<string,number>} [worldPlaytimes] - Map of world UID -> playtime seconds, from {@link computeWorldPlaytimes}.
+   * @returns {HTMLElement}
+   */
+  function renderWorldCard(w, index, worldNames, worldPlaytimes) {
+    const el = clone("tpl-world-card");
+    const resolvedName = worldNames && worldNames[w.uid];
+    el.querySelector(".world-title").textContent = resolvedName
+      ? resolvedName + " (World " + (index + 1) + ")"
+      : "World " + (index + 1);
+    const pointsBody = el.querySelector(".world-points");
+
+    /**
+     * @param {string} label
+     * @param {string} value
+     * @returns {HTMLElement} The created row, so callers can attach behavior (e.g. a click-to-focus handler).
+     */
+    const addRow = (label, value) => {
+      const row = clone("tpl-world-point-row");
+      row.querySelector(".cell-label").textContent = label;
+      row.querySelector(".cell-value").textContent = value;
+      pointsBody.appendChild(row);
+      return row;
+    };
+
+    addRow("World UID", w.uid);
+    const playtime = worldPlaytimes && worldPlaytimes[w.uid];
+    if (playtime !== undefined) addRow("Playtime", formatSeconds(playtime));
+    if (w.exploredPercent !== undefined) addRow("Map Explored", fmtFloat(w.exploredPercent, 1) + "%");
+    if (w.mapError) addRow("Map Data", "Could not decode (" + w.mapError + ")");
+
+    // Spawn/logout/death/home are just points with no type/owner/checked
+    // state — rather than a separate table, they're rows in the same
+    // searchable table as the map's actual pins, tagged with a nodeId so
+    // clicking still jumps the map to the right node (see initPinMap).
+    const specialPoints = [];
+    if (w.haveSpawn) specialPoints.push({ label: "Spawn Point", pos: w.spawn, nodeId: "spawn" });
+    if (w.hasLogout) specialPoints.push({ label: "Logout Point", pos: w.logout, nodeId: "logout" });
+    if (w.hasDeath) specialPoints.push({ label: "Death Point", pos: w.death, nodeId: "death" });
+    specialPoints.push({ label: "Home Point", pos: w.home, nodeId: "home" });
+    // Pair each pin with its original index so a click can still find the
+    // right Cytoscape node ("pin"+i, see initPinMap) after search/paging
+    // reorders or drops entries.
+    const pins = (w.pins || []).map((p, i) => ({ p, i }));
+    const entries = specialPoints.map(pt => ({ point: pt })).concat(pins.map(pin => ({ pin })));
+
+    el.querySelector(".pins-heading").textContent = "Points & Pins (" + entries.length + ")";
+    const list = buildListView(
+      entries,
+      (entry) => entry.point
+        ? entry.point.label
+        : (entry.pin.p.name || "") + " " + (entry.pin.p.resolvedOwnerName || entry.pin.p.ownerName || "") + " " + (entry.pin.p.ownerId || ""),
+      () => { const table = clone("tpl-table-pins"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      (entry) => {
+        const row = clone("tpl-row-pin");
+        if (entry.point) {
+          const { label, pos, nodeId } = entry.point;
+          row.querySelector(".cell-name").textContent = label;
+          row.querySelector(".cell-x").textContent = fmtFloat(pos[0], 1);
+          row.querySelector(".cell-y").textContent = fmtFloat(pos[1], 1);
+          row.querySelector(".cell-z").textContent = fmtFloat(pos[2], 1);
+          row.querySelector(".cell-type").textContent = "—";
+          row.querySelector(".cell-checked").textContent = "—";
+          row.querySelector(".cell-owner").textContent = "—";
+          row.querySelector(".cell-owner-id").textContent = "—";
+          row.classList.add("jumpable");
+          row.title = "Click to center the map on this point";
+          row.addEventListener("click", () => focusMapPoint(nodeId));
+        } else {
+          const { p, i } = entry.pin;
+          row.querySelector(".cell-name").textContent = p.name || "(unnamed)";
+          row.querySelector(".cell-x").textContent = fmtFloat(p.pos[0], 0);
+          row.querySelector(".cell-y").textContent = fmtFloat(p.pos[1], 0);
+          row.querySelector(".cell-z").textContent = fmtFloat(p.pos[2], 0);
+          row.querySelector(".cell-type").textContent = String(p.pinType);
+          row.querySelector(".cell-checked").textContent = p.checked ? "Yes" : "";
+          // resolvedOwnerName comes from cross-referencing this pin's
+          // ownerId against inventory crafterIDs (see resolvePinOwners) —
+          // the game's own ownerName is often just "Steam_<id>".
+          const ownerCell = row.querySelector(".cell-owner");
+          ownerCell.textContent = p.resolvedOwnerName || p.ownerName || "—";
+          row.querySelector(".cell-owner-id").textContent = p.ownerId || "—";
+          if (p.ownerId && p.ownerId !== "0") {
+            ownerCell.classList.add("player-link");
+            ownerCell.title = "Click to jump to this player in Known Players";
+            ownerCell.addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (jumpToSection) jumpToSection("Known Players");
+              if (knownPlayersListView) knownPlayersListView.jumpTo(([id]) => id === p.ownerId);
+            });
+          }
+          row.classList.add("jumpable");
+          row.title = "Click to center the map on this pin";
+          row.addEventListener("click", () => focusMapPoint("pin" + i));
+        }
+        return row;
+      },
+      { searchPlaceholder: "Filter points & pins…" }
+    );
+    pointsListView = list;
+    el.querySelector(".pins-body-wrap").appendChild(list);
+    return el;
+  }
+
+  /** Holds the currently-loaded worlds + resolved names, so the world <select> can re-render on change without re-parsing. @type {{worlds: object[], worldNames: (Object<string,string>|undefined)}|null} */
+  let worldsState = null;
+  /** The live Cytoscape instance for the currently-shown world's pin map, if any. @type {import('cytoscape').Core|null} */
+  let pinMapInstance = null;
+  /** The current world's merged points+pins {@link buildListView}, so a map node click can reveal its table row. @type {(ReturnType<typeof buildListView>)|null} */
+  let pointsListView = null;
+  /** The "Known Players" {@link buildListView}, so clicking a "Placed By" name can reveal that player's row. @type {(ReturnType<typeof buildListView>)|null} */
+  let knownPlayersListView = null;
+
+  /**
+   * Plots a world's pins and spawn/logout/death/home points as a spatial
+   * scatter (no edges — Cytoscape is used here purely for its zoomable,
+   * pannable canvas and label layout) using each point's real in-game X/Z
+   * coordinates, so relative distances are preserved. Names starting with
+   * "$" are game-generated markers (bestiary/event pins) rather than
+   * something the player typed, so they're plotted small and unlabeled to
+   * avoid cluttering the map with internal tokens.
+   * @param {HTMLElement} container - Must already be attached to the visible DOM with a non-zero size.
+   * @param {object} w - The world entry to plot.
+   * @returns {import('cytoscape').Core|null} The Cytoscape instance, or `null` if nothing could be plotted.
+   */
+  function initPinMap(container, w) {
+    const elements = [];
+    /** @param {string} id @param {string} label @param {string} kind @param {[number,number,number]} pt */
+    const addPoint = (id, label, kind, pt) => elements.push({ data: { id, label, kind }, position: { x: pt[0], y: -pt[2] } });
+    if (w.haveSpawn) addPoint("spawn", "Spawn / Respawn", "spawn", w.spawn);
+    if (w.hasLogout) addPoint("logout", "Last Logout", "logout", w.logout);
+    if (w.hasDeath) addPoint("death", "Last Death", "death", w.death);
+    addPoint("home", "Home", "home", w.home);
+    (w.pins || []).forEach((m, i) => {
+      const isAuto = !!(m.name && m.name.charAt(0) === "$");
+      elements.push({
+        data: { id: "pin" + i, label: isAuto ? "" : (m.name || ""), kind: isAuto ? "auto" : "pin" },
+        position: { x: m.pos[0], y: -m.pos[2] }
+      });
+    });
+
+    if (!elements.length) {
+      container.appendChild(empty("No spawn/pin coordinates to plot for this world."));
+      return null;
+    }
+    if (typeof cytoscape === "undefined") {
+      container.appendChild(empty("The pin map couldn't load — vendor/cytoscape.min.js is missing (run \"npm install\" if working from source)."));
+      return null;
+    }
+
+    try {
+      const cy = cytoscape({
+        container,
+        elements,
+        layout: { name: "preset" },
+        userZoomingEnabled: true,
+        userPanningEnabled: true,
+        boxSelectionEnabled: false,
+        autoungrabify: true,
+        wheelSensitivity: 4, // cytoscape's default (1) feels sluggish for a map you're expected to zoom around a lot
+        style: [
+          { selector: "node", style: {
+            "background-color": "#cbb999", "width": 8, "height": 8,
+            "label": "data(label)", "color": "#ece4d3", "font-size": 9,
+            "text-valign": "bottom", "text-margin-y": 4, "text-wrap": "none",
+            "border-width": 1, "border-color": "#16130f"
+          } },
+          { selector: 'node[kind = "home"]', style: { "background-color": "#c99a44", "shape": "star", "width": 16, "height": 16 } },
+          { selector: 'node[kind = "spawn"]', style: { "background-color": "#6fa06a", "shape": "triangle", "width": 14, "height": 14 } },
+          { selector: 'node[kind = "logout"]', style: { "background-color": "#6a8caf", "shape": "diamond", "width": 14, "height": 14 } },
+          { selector: 'node[kind = "death"]', style: { "background-color": "#c15b4a", "shape": "square", "width": 12, "height": 12 } },
+          { selector: 'node[kind = "auto"]', style: { "background-color": "#4a4033", "width": 5, "height": 5, "border-width": 0 } }
+        ]
+      });
+      cy.fit(undefined, 40);
+      cy.on("tap", "node", (evt) => showPointDetails(evt.target.id()));
+      return cy;
+    } catch (e) {
+      container.appendChild(empty("Could not render the pin map: " + e.message));
+      return null;
+    }
+  }
+
+  /**
+   * Cytoscape doesn't automatically notice its container becoming visible
+   * again after `display: none` (the section picker's doing), so a resize +
+   * re-fit is needed or the map can render blank/mis-sized. A no-op for any
+   * other section.
+   * @param {HTMLElement} el - The section element that just became visible.
+   */
+  function refreshPinMapIfWorldPanel(el) {
+    if (el.id === "worldPanel" && pinMapInstance) {
+      pinMapInstance.resize();
+      pinMapInstance.fit(undefined, 40);
+    }
+  }
+
+  /**
+   * Pans/zooms the currently-shown pin map to frame a single special point
+   * (spawn/logout/death/home), in response to clicking its row in the
+   * points table. A no-op if the map failed to render or that point isn't
+   * present in this world.
+   * @param {string} nodeId - One of "spawn", "logout", "death", "home".
+   */
+  function focusMapPoint(nodeId) {
+    if (!pinMapInstance) return;
+    const node = pinMapInstance.$id(nodeId);
+    if (!node || node.empty()) return;
+    // Padding must stay well under half the map container's height (it's
+    // fixed at 380px via CSS) — Cytoscape's fit math computes zoom from
+    // (containerSize - 2*padding), and a padding that's too large relative
+    // to the container makes that go negative, producing a nonsensical
+    // zoom/pan (which is what caused clicks to zoom out to nothing).
+    pinMapInstance.stop();
+    pinMapInstance.animate({ fit: { eles: node, padding: 60 } }, { duration: 400, easing: "ease-out" });
+  }
+
+  /**
+   * The reverse of {@link focusMapPoint}: clicking a node on the pin map
+   * reveals that point/pin's row in the points & pins table below (see
+   * {@link renderWorldCard}), scrolling to it and briefly flashing it,
+   * rather than leaving the click with no visible effect.
+   * @param {string} nodeId - "spawn"/"logout"/"death"/"home", or "pin"+i.
+   */
+  function showPointDetails(nodeId) {
+    if (!pointsListView || !pointsListView.jumpTo) return;
+    pointsListView.jumpTo((entry) => entry.point ? entry.point.nodeId === nodeId : ("pin" + entry.pin.i) === nodeId);
+  }
+
+  /**
+   * Renders the given world into `#worldPanel`, (re)initializing its pin map.
+   * Called on load with the first world, and again whenever the world
+   * `<select>` changes.
+   * @param {number} index - Index into `worldsState.worlds`.
+   */
+  function showWorld(index) {
+    const content = document.getElementById("worldContent");
+    if (!content || !worldsState) return;
+    if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
+    content.textContent = "";
+    const w = worldsState.worlds[index];
+    const cardEl = renderWorldCard(w, index, worldsState.worldNames, worldsState.worldPlaytimes);
+    content.appendChild(cardEl);
+    const mapContainer = cardEl.querySelector(".pin-map");
+    if (mapContainer) pinMapInstance = initPinMap(mapContainer, w);
+  }
+
+  /**
+   * Builds the world `<select>` control and wires it to {@link showWorld}.
+   * @param {object[]} worlds
+   * @param {Object<string,string>} [worldNames]
+   * @returns {HTMLElement}
+   */
+  function buildWorldSelectBar(worlds, worldNames) {
+    const el = clone("tpl-world-select-bar");
+    const select = el.querySelector("select");
+    worlds.forEach((w, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      const name = worldNames && worldNames[w.uid];
+      opt.textContent = name ? name + " (World " + (i + 1) + ")" : "World " + (i + 1);
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", () => showWorld(Number(select.value)));
+    return el;
+  }
+
+  /**
+   * Builds the "Unparsed data" card body: an explanation, an extracted
+   * readable-text frequency table, and a collapsible raw hex dump.
+   * @param {{leftoverStrings?: {entries: Array<[string,number]>, total: number, truncated: boolean}, leftoverHex?: string}} result
+   * @returns {HTMLElement}
+   */
+  function renderLeftover(result) {
+    const wrap = clone("tpl-leftover");
+    wrap.querySelector(".leftover-intro").textContent =
+      "Bytes this viewer couldn't map to a known field. Below is the readable text found inside them " +
+      "(item/creature/setting names are often recognizable even when the exact structure isn't decoded), " +
+      "plus a raw hex dump.";
+    if (result.leftoverStrings && result.leftoverStrings.entries.length) {
+      const details = wrap.querySelector(".strings-details");
+      details.hidden = false;
+      const total = result.leftoverStrings.total + (result.leftoverStrings.truncated ? "+" : "");
+      wrap.querySelector(".strings-summary").textContent = "Readable text found (" + total + " unique strings)";
+      const list = buildListView(
+        result.leftoverStrings.entries,
+        ([s]) => s,
+        () => { const table = clone("tpl-table-leftover-strings"); return { root: table, appendTo: table.querySelector("tbody") }; },
+        ([s, c]) => {
+          const row = clone("tpl-row-leftover-string");
+          row.querySelector(".cell-text").textContent = s;
+          row.querySelector(".cell-count").textContent = String(c);
+          return row;
+        },
+        { pageSize: 25, searchPlaceholder: "Filter text…" }
+      );
+      wrap.querySelector(".strings-scroll").appendChild(list);
+    }
+    wrap.querySelector(".hexdump").textContent = result.leftoverHex || "";
+    return wrap;
+  }
+
+  /**
+   * Builds the Checksum card body.
+   * @param {string} hex
+   * @returns {HTMLElement}
+   */
+  function renderChecksum(hex) {
+    const el = clone("tpl-checksum");
+    el.textContent = hex;
+    return el;
+  }
+
+  /** localStorage key for which single section title the user last selected. Best-effort — every access is wrapped in try/catch. */
+  const SECTION_SELECTED_KEY = "valheim-viewer-selected-section";
+
+  /** @returns {string|null} The last-selected section title, or null if unavailable/none. */
+  function loadSelectedSection() {
+    try { return localStorage.getItem(SECTION_SELECTED_KEY); } catch (e) { return null; }
+  }
+
+  /** @param {string} title */
+  function saveSelectedSection(title) {
+    try { localStorage.setItem(SECTION_SELECTED_KEY, title); } catch (e) { /* private browsing, quota, etc. — fine to skip */ }
+  }
+
+  /**
+   * Set by {@link buildSectionSelector} to its internal `selectSection`
+   * closure once the picker exists, so other parts of the page (e.g. a
+   * Table of Contents row) can jump to a section by title without needing
+   * a reference to the picker itself — mirrors how {@link focusMapPoint}
+   * lets pin/point rows jump into the map.
+   * @type {((title: string) => void)|null}
+   */
+  let jumpToSection = null;
+
+  /**
+   * Builds a single `<select>` that shows exactly one top-level section at
+   * a time (everything else stays rendered but hidden) — this page has
+   * grown enough sections that a scroll-everything layout stopped being
+   * usable, and letting several be visible at once (an earlier version of
+   * this control used checkboxes) was more clutter than it was worth. Prev/
+   * Next buttons step through sections in order without opening the
+   * dropdown. The chosen section persists across reloads via localStorage.
+   * @param {HTMLElement} container - The `#output` element, already fully populated.
+   * @returns {HTMLElement}
+   */
+  function buildSectionSelector(container) {
+    const sections = Array.from(container.children).filter(el => el.dataset && el.dataset.sectionTitle);
+    const picker = clone("tpl-section-selector");
+    const select = picker.querySelector("select");
+
+    sections.forEach(el => {
+      const opt = document.createElement("option");
+      opt.value = el.dataset.sectionTitle;
+      opt.textContent = el.dataset.sectionTitle;
+      select.appendChild(opt);
+    });
+
+    const prevBtn = picker.querySelector('[data-action="prev-section"]');
+    const nextBtn = picker.querySelector('[data-action="next-section"]');
+
+    const showOnly = (title) => {
+      sections.forEach(el => {
+        const visible = el.dataset.sectionTitle === title;
+        el.style.display = visible ? "" : "none";
+        if (visible) refreshPinMapIfWorldPanel(el);
+      });
+      const idx = sections.findIndex(el => el.dataset.sectionTitle === title);
+      prevBtn.disabled = idx <= 0;
+      nextBtn.disabled = idx === -1 || idx >= sections.length - 1;
+    };
+
+    const selectSection = (title) => {
+      select.value = title;
+      showOnly(title);
+      saveSelectedSection(title);
+    };
+    jumpToSection = selectSection;
+
+    const saved = loadSelectedSection();
+    const initial = sections.some(el => el.dataset.sectionTitle === saved) ? saved : (sections[0] && sections[0].dataset.sectionTitle);
+    if (initial) selectSection(initial);
+
+    select.addEventListener("change", () => selectSection(select.value));
+    prevBtn.addEventListener("click", () => {
+      const idx = sections.findIndex(el => el.dataset.sectionTitle === select.value);
+      if (idx > 0) selectSection(sections[idx - 1].dataset.sectionTitle);
+    });
+    nextBtn.addEventListener("click", () => {
+      const idx = sections.findIndex(el => el.dataset.sectionTitle === select.value);
+      if (idx !== -1 && idx < sections.length - 1) selectSection(sections[idx + 1].dataset.sectionTitle);
+    });
+
+    return picker;
+  }
+
+  /**
+   * Builds the searchable "Table of Contents" table: one row per other
+   * section, with its description, clicking a row jumps straight to that
+   * section via {@link jumpToSection}.
+   * @param {{title: string, description: string}[]} entries
+   * @returns {HTMLElement}
+   */
+  function renderTableOfContents(entries) {
+    if (!entries.length) return empty("Nothing to show yet.");
+    return buildListView(
+      entries,
+      ({ title, description }) => title + " " + description,
+      () => { const table = clone("tpl-table-toc"); return { root: table, appendTo: table.querySelector("tbody") }; },
+      ({ title, description }) => {
+        const row = clone("tpl-row-namevalue");
+        row.querySelector(".cell-name").textContent = title;
+        row.querySelector(".cell-value").textContent = description;
+        row.classList.add("jumpable");
+        row.title = "Click to go to this section";
+        row.addEventListener("click", () => { if (jumpToSection) jumpToSection(title); });
+        return row;
+      },
+      { searchPlaceholder: "Filter sections…" }
+    );
+  }
+
+  /**
+   * When the character's own `PlayerStats.knownWorlds` (world name ->
+   * playtime, decoded from the save itself — see README.md) names exactly
+   * one world, this assigns that name to whichever world entry has a custom
+   * spawn point set (the one actually played in). With more than one
+   * distinct self-known name there is no reliable way to tell which name
+   * belongs to which world UID (the character file never stores that link),
+   * so this deliberately does nothing rather than guess.
+   * @param {object} d - `result.data`.
+   * @returns {Object<string,string>}
+   */
+  function withSelfKnownWorldName(d) {
+    const merged = {};
+    if (!d.worlds || !d.worlds.length || !d.playerStats || !d.playerStats.length) return merged;
+    const names = new Set();
+    d.playerStats.forEach(block => { for (const n of Object.keys(block.knownWorlds || {})) names.add(n); });
+    if (names.size !== 1) return merged;
+    const [onlyName] = names;
+    const target = d.worlds.find(w => w.haveSpawn) || d.worlds[0];
+    if (!merged[target.uid]) merged[target.uid] = onlyName;
+    return merged;
+  }
+
+  /**
+   * Cross-references each world's resolved name (from
+   * {@link withSelfKnownWorldName}) against the character's own
+   * `PlayerStats.knownWorlds` (name -> playtime seconds) to surface a
+   * "Playtime" figure in the World Details panel wherever the names match.
+   * @param {object} d - `result.data`.
+   * @param {Object<string,string>} worldNames - Already-merged world UID -> name map.
+   * @returns {Object<string,number>} World UID -> playtime seconds.
+   */
+  function computeWorldPlaytimes(d, worldNames) {
+    const playtimes = {};
+    if (!d.worlds || !d.playerStats || !d.playerStats.length) return playtimes;
+    const knownWorlds = {};
+    d.playerStats.forEach(block => Object.assign(knownWorlds, block.knownWorlds || {}));
+    d.worlds.forEach(w => {
+      const name = worldNames[w.uid];
+      if (name && knownWorlds[name] !== undefined) playtimes[w.uid] = knownWorlds[name];
+    });
+    return playtimes;
+  }
+
+  /**
+   * @param {string} name
+   * @returns {boolean} True if `name` is just the game's auto-generated
+   *   `"Steam_<id>"` fallback rather than a real chosen display name.
+   */
+  function isRawSteamName(name) {
+    return /^Steam_\d+$/.test(name || "");
+  }
+
+  /**
+   * @param {string} name
+   * @returns {string|null} The numeric Steam64 ID if `name` is a raw
+   *   `"Steam_<id>"` fallback, else `null`.
+   */
+  function extractSteamId(name) {
+    const m = /^Steam_(\d+)$/.exec(name || "");
+    return m ? m[1] : null;
+  }
+
+  /**
+   * Collects every player found anywhere in the save — the character's own
+   * identity, every inventory item's crafter, and every map pin's owner —
+   * into one consolidated "Known Players" list, keyed by Valheim's internal
+   * per-profile player ID (not the same number as a Steam64 ID — see
+   * below).
+   *
+   * The real Steam64 ID is recovered separately: the game's own
+   * `"Steam_<id>"` fallback name embeds it directly, but only shows up for
+   * entries the game hasn't (yet) resolved to a display name. The same
+   * internal ID can appear with a real display name on some entries and
+   * the raw `"Steam_<id>"` fallback on others (e.g. an item crafted before
+   * the game had fetched that player's Steam profile) — so rather than
+   * letting a real name simply overwrite the raw one (losing the Steam ID
+   * in the process, as an earlier version of this did), every name variant
+   * seen for an ID is scanned to capture both pieces independently.
+   * @param {object} d - `result.data`.
+   * @returns {Map<string,{name: string, steamId: string|undefined}>} Player ID -> best-known display name and Steam64 ID (if ever seen).
+   */
+  function collectKnownPlayers(d) {
+    const players = new Map();
+    const consider = (id, name) => {
+      if (!id || id === "0" || !name) return;
+      const entry = players.get(id) || {};
+      const steamId = extractSteamId(name);
+      if (steamId) {
+        if (!entry.steamId) entry.steamId = steamId;
+      } else if (!entry.name) {
+        entry.name = name;
+      }
+      players.set(id, entry);
+    };
+    if (d.playerHeader) consider(d.playerHeader.id, d.playerHeader.name);
+    if (d.playerData && d.playerData.inventory) {
+      d.playerData.inventory.items.forEach(it => consider(it.crafterID, it.crafterName));
+    }
+    (d.worlds || []).forEach(w => {
+      (w.pins || []).forEach(p => {
+        consider(p.ownerId, p.resolvedOwnerName);
+        consider(p.ownerId, p.ownerName);
+      });
+    });
+    // Fill in a display name for IDs where only the raw Steam fallback was
+    // ever seen (no real display name turned up anywhere in the save).
+    players.forEach(entry => { if (!entry.name && entry.steamId) entry.name = "Steam_" + entry.steamId; });
+    return players;
+  }
+
+  /**
+   * Renders a full parse `result` into the page: the meta line, notes,
+   * errors, and one card per section of data that was available.
+   * @param {Awaited<ReturnType<typeof parseCharacterFile>>} result
+   */
+  function render(result) {
+    const out = document.getElementById("output");
+    const errBox = document.getElementById("errors");
+    const noteBox = document.getElementById("notes");
+    const meta = document.getElementById("meta");
+    out.textContent = "";
+    errBox.textContent = "";
+    noteBox.textContent = "";
+
+    meta.textContent = "File size: " + result.totalBytes.toLocaleString() + " bytes" +
+      (result.data.dataSize !== undefined ? " · data block: " + result.data.dataSize.toLocaleString() + " bytes" : "") +
+      (result.bytesConsumed !== undefined ? " · parsed: " + result.bytesConsumed.toLocaleString() + " / " + result.bytesTotal.toLocaleString() + " bytes" : "");
+
+    result.notes.forEach(n => {
+      const el = clone("tpl-note");
+      el.textContent = n;
+      noteBox.appendChild(el);
+    });
+    result.errors.forEach(e => {
+      const el = clone("tpl-error");
+      el.textContent = e;
+      errBox.appendChild(el);
+    });
+
+    const d = result.data;
+    const pd = d.playerData;
+    const hasWorlds = d.worlds && d.worlds.length;
+    const worldNames = withSelfKnownWorldName(d);
+    const worldPlaytimes = computeWorldPlaytimes(d, worldNames);
+
+    // Overview, Skills, and Known Players are appended directly (not into a
+    // fragment) so World Details can be inserted right after them, ahead of
+    // everything else — see the hasWorlds block below.
+    out.appendChild(card("Overview", undefined, renderOverview(d),
+      "Character name, class/level, vitals, appearance, file checksum, and other top-level summary fields."));
+    if (pd && pd.skills) out.appendChild(card("Skills", pd.skills.length, renderSkills(pd.skills),
+      "Skill levels, internal skill IDs, and XP accumulators."));
+    const knownPlayers = collectKnownPlayers(d);
+    if (knownPlayers.size) out.appendChild(card("Known Players", knownPlayers.size, renderKnownPlayers(knownPlayers),
+      "Every player name and Steam ID found anywhere in this save — this character's own identity, inventory item crafters, and map pin owners."));
+
+    const globalFrag = document.createDocumentFragment();
+
+    // Each of PlayerProfile.PlayerStats block 0's dictionaries (world
+    // playtime, enemy kills, item pickups/crafts, ...) gets its own card
+    // rather than being bundled into one long "Player Statistics" page —
+    // with the single-section-at-a-time selector below, that bundling just
+    // meant flipping through unrelated data to reach the one list you
+    // wanted. Block 0 (`c_RawStats`) holds true lifetime totals; the other
+    // 9 blocks are duplicate per-achievement-difficulty copies and aren't
+    // shown.
+    const raw = d.playerStats && d.playerStats[0];
+    if (raw) {
+      // World playtime (raw.knownWorlds: world name -> seconds) is surfaced
+      // as a "Playtime" row on each matching world in World Details instead
+      // of a standalone section — see computeWorldPlaytimes().
+      const kills = raw.enemyStats && raw.enemyStats[0];
+      if (kills && Object.keys(kills).length) {
+        globalFrag.appendChild(card("Enemy Kills", Object.keys(kills).length, renderNameValueTable(kills, "Enemy", formatCount),
+          "Lifetime kill counts per enemy type."));
+      }
+      [
+        ["Items Picked Up", raw.itemPickupStats, "Item", "Lifetime pickup counts per item type."],
+        ["Items Crafted", raw.itemCraftStats, "Item", "Lifetime craft counts per item type."],
+        ["Resources Foraged", raw.pickableStats, "Resource", "Lifetime counts of foraged/gathered resource nodes."],
+        ["Foods Eaten", raw.foodEatenStats, "Food", "Lifetime counts of foods eaten."],
+        ["Building Pieces Placed", raw.piecesPlacedStats, "Piece", "Lifetime counts of building pieces placed."]
+      ].forEach(([title, map, label, description]) => {
+        if (map && Object.keys(map).length) {
+          globalFrag.appendChild(card(title, Object.keys(map).length, renderNameValueTable(map, label, formatCount), description));
+        }
+      });
+      if (Object.keys(raw.knownWorldKeys || {}).length) {
+        // Each key already encodes both the flag and its value as one
+        // string (e.g. "defeated_eikthyr 1", "playerdamage default") — the
+        // accumulated-seconds value Valheim stores alongside it is really
+        // just internal bookkeeping (session time added to whichever state
+        // was true at each save), not a meaningful duration to show per
+        // flag, so this is a plain list rather than a name/value table.
+        globalFrag.appendChild(card("World & Story Flags", Object.keys(raw.knownWorldKeys).length, renderStringList(Object.keys(raw.knownWorldKeys), "flags"),
+          "Global events, bosses defeated, and other one-off world/story flags this character has triggered."));
+      }
+      if (Object.keys(raw.knownCommands || {}).length) {
+        globalFrag.appendChild(card("Console Commands", Object.keys(raw.knownCommands).length, renderNameValueTable(raw.knownCommands, "Command", formatCount),
+          "Console/cheat commands this character has used, with how many times each was used."));
+      }
+      const nonZeroRaw = raw.stats.map((v, i) => [i, v]).filter(([, v]) => v !== 0);
+      if (nonZeroRaw.length) {
+        const rawStatsList = buildListView(
+          nonZeroRaw,
+          ([i]) => String(i),
+          () => { const table = clone("tpl-table-namevalue"); table.querySelector(".col-name").textContent = "Stat #"; return { root: table, appendTo: table.querySelector("tbody") }; },
+          ([i, v]) => {
+            const row = clone("tpl-row-namevalue");
+            row.querySelector(".cell-name").textContent = String(i);
+            row.querySelector(".cell-value").textContent = fmtFloat(v, 2);
+            return row;
+          },
+          { searchPlaceholder: "Filter stat #…" }
+        );
+        globalFrag.appendChild(card("Raw Stat Values", nonZeroRaw.length, rawStatsList,
+          "Undecoded lifetime stat slots, shown by raw index for completeness — not all of these have a known meaning."));
+      }
+    }
+
+    if (pd) {
+      if (pd.inventory) globalFrag.appendChild(card("Inventory", pd.inventory.items.length, renderInventory(pd.inventory),
+        "Items currently carried, worn, or equipped, with quantity, durability, quality, and crafter info."));
+      if (pd.knownRecipes) globalFrag.appendChild(card("Known Recipes", pd.knownRecipes.length, renderStringList(pd.knownRecipes, "recipes"),
+        "Crafting recipes this character has unlocked."));
+      if (pd.knownStations) globalFrag.appendChild(card("Known Crafting Stations", pd.knownStations.length, renderStations(pd.knownStations),
+        "Crafting stations this character has discovered, with the station level required to use them."));
+      if (pd.knownMaterials) globalFrag.appendChild(card("Discovered Materials", pd.knownMaterials.length, renderStringList(pd.knownMaterials, "materials"),
+        "Crafting materials this character has identified/discovered."));
+      if (pd.knownBiomes) globalFrag.appendChild(card("Known Biomes", pd.knownBiomes.length, renderStringList(pd.knownBiomes, "biomes"),
+        "Biomes this character has explored."));
+      if (pd.uniques) globalFrag.appendChild(card("Discovered Uniques", pd.uniques.length, renderStringList(pd.uniques, "uniques"),
+        "Unique bosses, items, or locations this character has discovered."));
+      if (pd.trophies) globalFrag.appendChild(card("Trophies", pd.trophies.length, renderStringList(pd.trophies, "trophies"),
+        "Trophies this character has collected from defeated enemies."));
+      if (pd.shownTutorials) globalFrag.appendChild(card("Tutorials Seen", pd.shownTutorials.length, renderStringList(pd.shownTutorials, "tutorials"),
+        "In-game tutorial popups this character has already been shown."));
+      if (Object.keys(pd.knownTexts || {}).length) globalFrag.appendChild(card("Known Texts", Object.keys(pd.knownTexts).length, renderTextMap(pd.knownTexts),
+        "Runestones, signs, and other in-game texts this character has read."));
+      if (pd.foods && pd.foods.length) globalFrag.appendChild(card("Active Food", pd.foods.length, renderFoods(pd.foods),
+        "Foods currently providing active buffs, with their remaining duration and stat bonuses."));
+      if (pd.decodeError) {
+        globalFrag.appendChild(card("Undecoded inventory/appearance data", pd.leftoverBytes ? pd.leftoverBytes.length : undefined,
+          renderLeftover({ leftoverStrings: result.data.playerDataLeftoverStrings, leftoverHex: result.data.playerDataLeftoverHex }),
+          "Leftover bytes after inventory/appearance parsing that couldn't be matched to a known field."));
+      }
+    }
+
+    // World-specific panel: inserted right after Known Players (rather than
+    // into a detached fragment first) because showWorld() initializes a
+    // Cytoscape canvas, which needs its container already laid out in the
+    // visible DOM to pick up a non-zero size. The world <select> lives
+    // inside this same panel (not as a separate top-level section) so it
+    // only appears while "World Details" is the chosen section.
+    if (hasWorlds) {
+      const panel = document.createElement("div");
+      panel.id = "worldPanel";
+      panel.dataset.sectionTitle = "World Details";
+      panel.dataset.sectionDescription = "Per-world spawn/logout/death/home points, map pins, and an interactive pin map. Use the World selector below to switch worlds.";
+      const desc = document.createElement("p");
+      desc.className = "section-desc";
+      desc.textContent = panel.dataset.sectionDescription;
+      panel.appendChild(desc);
+      panel.appendChild(buildWorldSelectBar(d.worlds, worldNames));
+      const worldContent = document.createElement("div");
+      worldContent.id = "worldContent";
+      panel.appendChild(worldContent);
+      out.appendChild(panel);
+      worldsState = { worlds: d.worlds, worldNames, worldPlaytimes };
+      showWorld(0);
+    }
+
+    out.appendChild(globalFrag);
+
+    const tailFrag = document.createDocumentFragment();
+    if (result.leftoverStrings || result.leftoverHex) {
+      tailFrag.appendChild(card("Unparsed data", result.leftoverBytes, renderLeftover(result),
+        "Bytes left over after parsing that couldn't be matched to any known field."));
+    }
+    out.appendChild(tailFrag);
+
+    // Table of Contents summarizes every section rendered above — built
+    // last so it can enumerate them, but inserted first (ahead of the
+    // section picker) so it's the natural landing page.
+    const tocEntries = Array.from(out.children)
+      .filter(el => el.dataset && el.dataset.sectionTitle)
+      .map(el => ({ title: el.dataset.sectionTitle, description: el.dataset.sectionDescription || "" }));
+    out.insertBefore(card("Table of Contents", tocEntries.length, renderTableOfContents(tocEntries),
+      "Every section in this report, with a one-line description of what it contains. Search or click a row to jump straight to it."), out.firstChild);
+
+    // Section picker goes last so it can enumerate whatever actually got
+    // rendered above (Table of Contents included), but visually first so
+    // it's usable without scrolling.
+    out.insertBefore(buildSectionSelector(out), out.firstChild);
+  }
+
+  // ---------- Wiring ----------
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const resetBtn = document.getElementById("resetBtn");
+  const findFileHelp = document.getElementById("findFileHelp");
+
+  /**
+   * @param {File} file
+   * @returns {Promise<ArrayBuffer>}
+   */
+  function readAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Could not read \"" + file.name + "\" from disk."));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Shows a single top-level error and clears any prior render.
+   * @param {string} message
+   */
+  function showFatalError(message) {
+    const el = clone("tpl-error");
+    el.textContent = message;
+    document.getElementById("errors").replaceChildren(el);
+    document.getElementById("notes").textContent = "";
+    document.getElementById("output").textContent = "";
+  }
+
+  /**
+   * Handles a drop/selection of one or more files: exactly one `.fch`
+   * character file is required; any others are ignored (with a note).
+   * @param {FileList|File[]} fileList
+   */
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList);
+    const fchFiles = files.filter(f => /\.fch$/i.test(f.name));
+
+    if (!fchFiles.length) {
+      showFatalError("Please include a Valheim \".fch\" character file.");
+      return;
+    }
+
+    let result;
+    try {
+      const fchBuffer = await readAsArrayBuffer(fchFiles[0]);
+      result = await parseCharacterFile(fchBuffer);
+    } catch (e) {
+      showFatalError("Failed to parse file: " + e.message);
+      return;
+    }
+
+    if (fchFiles.length > 1) {
+      result.notes.push("Multiple .fch files were dropped — showing \"" + fchFiles[0].name + "\" and ignoring the rest.");
+    }
+
+    render(result);
+    dropzone.style.display = "none";
+    findFileHelp.style.display = "none";
+    resetBtn.style.display = "inline-block";
+  }
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", e => { if (e.target.files.length) handleFiles(e.target.files); });
+
+  ["dragenter", "dragover"].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add("drag"); }));
+  ["dragleave", "drop"].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove("drag"); }));
+  dropzone.addEventListener("drop", e => {
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  });
+
+  resetBtn.addEventListener("click", () => {
+    dropzone.style.display = "block";
+    findFileHelp.style.display = "block";
+    resetBtn.style.display = "none";
+    if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
+    worldsState = null;
+    document.getElementById("output").textContent = "";
+    document.getElementById("errors").textContent = "";
+    document.getElementById("notes").textContent = "";
+    document.getElementById("meta").textContent = "";
+    fileInput.value = "";
+  });
+
+  // PWA: registers the service worker (sw.js) for installability and
+  // offline caching. Browsers only allow service workers on http(s)
+  // (including localhost) origins — this silently no-ops when the page is
+  // opened directly as a local file:// path, which is expected and fine;
+  // file parsing itself never depended on this.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => { /* e.g. file:// origin — nothing to surface */ });
+    });
+  }
+
+  /**
+   * Formats the time since `date` as a short, coarse human-readable string
+   * ("just now", "5 minutes ago", "3 days ago", ...), rounding down to the
+   * largest whole unit — good enough for a "last built" footer, not meant
+   * to be precise.
+   * @param {Date} date
+   * @returns {string}
+   */
+  function formatTimeAgo(date) {
+    const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    const units = [
+      ["year", 31536000], ["month", 2592000], ["week", 604800],
+      ["day", 86400], ["hour", 3600], ["minute", 60]
+    ];
+    for (const [label, secondsPerUnit] of units) {
+      const count = Math.floor(seconds / secondsPerUnit);
+      if (count >= 1) return count + " " + label + (count === 1 ? "" : "s") + " ago";
+    }
+    return "just now";
+  }
+
+  /**
+   * Populates the "Built ... ago" footer from public/build.json, which only
+   * exists on a deployed build (see scripts/generate-build-info.js, run via
+   * `npm run build` in CI) — running the page straight from source without
+   * that step means this fetch 404s (or errors outright on a file:// origin
+   * with no server), which is expected, so the footer just silently stays
+   * empty rather than showing an error.
+   */
+  async function loadBuildInfo() {
+    const footer = document.getElementById("buildInfo");
+    if (!footer) return;
+    try {
+      const res = await fetch("build.json", { cache: "no-store" });
+      if (!res.ok) return;
+      const info = await res.json();
+      const builtAt = new Date(info.builtAt);
+      if (isNaN(builtAt.getTime())) return;
+      footer.appendChild(document.createTextNode("Built " + formatTimeAgo(builtAt) + "."));
+      if (info.commitUrl) {
+        footer.appendChild(document.createTextNode(" "));
+        const link = document.createElement("a");
+        link.href = info.commitUrl;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "View commit" + (info.commit ? " (" + info.commit.slice(0, 7) + ")" : "");
+        footer.appendChild(link);
+      }
+    } catch (e) {
+      // No build.json (local/dev use, or a file:// origin) — nothing to show.
+    }
+  }
+  loadBuildInfo();
+})();
+</script>
+</body>
+</html>
