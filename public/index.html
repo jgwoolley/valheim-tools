@@ -140,6 +140,10 @@
   }
   .mono { font-family: var(--mono); }
   .checksum-text { font-size: 0.75rem; word-break: break-all; }
+  .checksum-status { font-size: 0.8rem; white-space: nowrap; }
+  .checksum-status.valid { color: var(--ok); }
+  .checksum-status.invalid { color: var(--danger); }
+  .checksum-status.unknown { color: var(--muted); }
   .stat-subheading { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin: 1rem 0 0.4rem; }
   .stat-subheading:first-child { margin-top: 0; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 0.9rem; margin-top: 0.6rem; font-size: 0.78rem; color: var(--muted); }
@@ -187,6 +191,8 @@
   .legend-death { background: #c15b4a; }
   .legend-pin { background: #cbb999; }
   .legend-auto { background: #4a4033; }
+  .legend-explored { background: rgba(203,185,153,0.55); border: 1px solid var(--border); }
+  .legend-boss { background: #8b1a1a; }
   .pin-map { height: 380px; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; }
   .pin-map-hint { color: var(--muted); font-size: 0.72rem; margin: -0.35rem 0 0.75rem; }
   .credits {
@@ -374,6 +380,8 @@
       <span><span class="legend-dot legend-death"></span>Last Death</span>
       <span><span class="legend-dot legend-pin"></span>Player Pin</span>
       <span><span class="legend-dot legend-auto"></span>Game Marker</span>
+      <span><span class="legend-dot legend-boss"></span>Boss</span>
+      <span><span class="legend-dot legend-explored"></span>Explored Area</span>
     </div>
     <div class="pin-map"></div>
     <p class="pin-map-hint">Scroll to zoom, drag to pan. Positions use each point's real in-game X/Z coordinates, so distances are relative and to scale.</p>
@@ -430,7 +438,7 @@
 </template>
 
 <template id="tpl-checksum">
-  <p class="mono checksum-text"></p>
+  <p><span class="mono checksum-text"></span> <span class="checksum-status"></span></p>
 </template>
 
 <template id="tpl-section-selector">
@@ -476,7 +484,13 @@
   };
   /** Maps the player model index to a display name. @type {Object<number,string>} */
   const BODY_TYPES = { 0: "Male", 1: "Female" };
-
+  /** Maps Valheim's internal `Minimap.PinType` enum values to display names — confirmed against Minimap.cs. @type {Object<number,string>} */
+  const PIN_TYPE_NAMES = {
+    0: "Icon0", 1: "Icon1", 2: "Icon2", 3: "Icon3", 4: "Death", 5: "Bed",
+    6: "Icon4", 7: "Shout", 8: "None", 9: "Boss", 10: "Player",
+    11: "Random Event", 12: "Ping", 13: "Event Area", 14: "Hildir1",
+    15: "Hildir2", 16: "Hildir3", 17: "Memorial"
+  };
   // ---------- Binary reader (little-endian, .NET BinaryWriter conventions) ----------
 
   /**
@@ -788,12 +802,33 @@
             const textureSize = mv.getInt32(mp, true); mp += 4;
             const gridLen = textureSize * textureSize;
             w.textureSize = textureSize;
+            // Confirmed against Minimap.cs: m_pixelSize is a fixed field
+            // (64f), never reassigned at runtime and never part of the
+            // saved data — only m_textureSize (read above) varies. Together
+            // with WorldToPixel()'s formula (px = worldX/pixelSize +
+            // textureSize/2, py = worldZ/pixelSize + textureSize/2), this
+            // is what lets renderExploredOverlay() place the fog-of-war
+            // grid at the right scale/position under the pin map.
+            w.pixelSize = 64;
             if (gridLen >= 0 && mp + gridLen <= raw.length) {
-              let exploredCount = 0;
-              for (let i = 0; i < gridLen; i++) if (raw[mp + i] !== 0) exploredCount++;
-              w.exploredPercent = gridLen ? (exploredCount / gridLen * 100) : 0;
+              w.exploredGrid = raw.slice(mp, mp + gridLen);
               mp += gridLen;
-              if (mapVersion >= 5) mp += gridLen; // exploredOthers grid, not shown
+              // Two separate bitmaps exist here: "explored" (this world's
+              // own fog-of-war) and, from map version 5 on, "exploredOthers"
+              // (area revealed via shared-map data from other players).
+              // Minimap.IsExplored() treats a cell as explored if EITHER
+              // bitmap has it set, so both the percentage and the overlay
+              // below OR them together too, rather than only counting the
+              // first grid as an earlier version of this parser did.
+              if (mapVersion >= 5 && mp + gridLen <= raw.length) {
+                w.exploredOthersGrid = raw.slice(mp, mp + gridLen);
+                mp += gridLen;
+              }
+              let exploredCount = 0;
+              for (let i = 0; i < gridLen; i++) {
+                if (w.exploredGrid[i] !== 0 || (w.exploredOthersGrid && w.exploredOthersGrid[i] !== 0)) exploredCount++;
+              }
+              w.exploredPercent = gridLen ? (exploredCount / gridLen * 100) : 0;
               if (mapVersion >= 2) {
                 const pinCount = mv.getInt32(mp, true); mp += 4;
                 w.pins = [];
@@ -840,18 +875,25 @@
   }
 
   /**
-   * Parses the player name/ID/seed header that follows the world list.
+   * Parses the player name/ID/startSeed header that follows the world list.
    * (The `havePlayerData` flag comes later, after `usedCheats`/`dateCreated`
    * — see {@link parseCharacterFile} — confirmed against Valheim's own
    * decompiled `PlayerProfile.LoadPlayerFromDisk`.)
+   *
+   * `startSeed` is `PlayerProfile.m_startSeed` — despite the name, this is
+   * NOT the seed of any world the character has played in (that lives only
+   * in each world's own `.fwl` file, which this viewer doesn't parse — see
+   * README.md). It's set once at character creation and, as far as this
+   * project has confirmed, only ever used to seed a random suggested name
+   * on the character-creation screen.
    * @param {Reader} r
-   * @returns {{name: string, id: string, seed: string}}
+   * @returns {{name: string, id: string, startSeed: string}}
    */
   function parsePlayerHeader(r) {
     const name = r.str();
     const id = r.i64().toString();
-    const seed = r.str();
-    return { name, id, seed };
+    const startSeed = r.str();
+    return { name, id, startSeed };
   }
 
   /**
@@ -1194,6 +1236,26 @@
   // ---------- Top-level parse ----------
 
   /**
+   * Independently recomputes the file's checksum (SHA-512 of the "data"
+   * block, per `ZPackage.writeLengthPrefixedHashedObject` — see
+   * {@link parseCharacterFile}) and compares it against the one stored in
+   * the file, using the browser's native Web Crypto API rather than a
+   * hand-rolled hash implementation.
+   * @param {Uint8Array} dataBytes - The exact bytes the checksum covers.
+   * @param {Uint8Array} storedChecksum - The checksum bytes read from the file.
+   * @returns {Promise<boolean|undefined>} `true`/`false` if it could be checked, `undefined` if this environment has no `crypto.subtle` (e.g. a non-secure context).
+   */
+  async function verifyChecksum(dataBytes, storedChecksum) {
+    if (!(window.crypto && window.crypto.subtle)) return undefined;
+    const digest = new Uint8Array(await window.crypto.subtle.digest("SHA-512", dataBytes));
+    if (digest.length !== storedChecksum.length) return false;
+    for (let i = 0; i < digest.length; i++) {
+      if (digest[i] !== storedChecksum[i]) return false;
+    }
+    return true;
+  }
+
+  /**
    * Records how many bytes were actually consumed and, if any remain,
    * captures them as both a hex dump and an extracted-strings table so the
    * UI can show a graceful fallback instead of silently dropping data.
@@ -1239,6 +1301,13 @@
         if (checksumSize >= 0 && checksumSize <= outer.remaining()) {
           const checksum = outer.slice(checksumSize);
           result.data.checksumHex = Array.from(checksum).map(b => b.toString(16).padStart(2, "0")).join("");
+          // Confirmed against Kakoen/valheim-save-tools' ZPackage.java
+          // (writeLengthPrefixedHashedObject): the game computes this as
+          // SHA-512 of exactly the preceding "data" block — the same bytes
+          // already isolated as dataBytes above — so it can be
+          // independently recomputed and compared here rather than just
+          // displayed.
+          result.data.checksumValid = await verifyChecksum(dataBytes, checksum);
         }
       }
     } catch (e) { /* checksum is informational only, ignore failures */ }
@@ -1589,7 +1658,9 @@
     grid.className = "grid";
     grid.appendChild(tile("Name", ph.name || "—"));
     grid.appendChild(tile("Player ID", ph.id || "—"));
-    grid.appendChild(tile("World Seed", ph.seed || "—"));
+    const startSeedTile = tile("Character Seed", ph.startSeed || "—");
+    startSeedTile.title = "Set once at character creation (PlayerProfile.m_startSeed) — this is not the seed of any world, which the character file never stores.";
+    grid.appendChild(startSeedTile);
     grid.appendChild(tile("Save Format Version", d.version !== undefined ? String(d.version) : "—"));
     grid.appendChild(tile("Has Live Player Data", d.havePlayerData ? "Yes" : "No"));
     if (d.usedCheats !== undefined) grid.appendChild(tile("Used Cheats", d.usedCheats ? "Yes" : "No"));
@@ -1601,7 +1672,7 @@
 
     if (d.checksumHex) {
       wrap.appendChild(subheading("Checksum"));
-      wrap.appendChild(renderChecksum(d.checksumHex));
+      wrap.appendChild(renderChecksum(d.checksumHex, d.checksumValid));
     }
     return wrap;
   }
@@ -1957,7 +2028,7 @@
           row.querySelector(".cell-x").textContent = fmtFloat(p.pos[0], 0);
           row.querySelector(".cell-y").textContent = fmtFloat(p.pos[1], 0);
           row.querySelector(".cell-z").textContent = fmtFloat(p.pos[2], 0);
-          row.querySelector(".cell-type").textContent = String(p.pinType);
+          row.querySelector(".cell-type").textContent = PIN_TYPE_NAMES[p.pinType] || String(p.pinType);
           row.querySelector(".cell-checked").textContent = p.checked ? "Yes" : "";
           // resolvedOwnerName comes from cross-referencing this pin's
           // ownerId against inventory crafterIDs (see resolvePinOwners) —
@@ -1996,6 +2067,89 @@
   /** The "Known Players" {@link buildListView}, so clicking a "Placed By" name can reveal that player's row. @type {(ReturnType<typeof buildListView>)|null} */
   let knownPlayersListView = null;
 
+  /** Cap on the fog-of-war overlay's rendered resolution, regardless of the save's own textureSize (which can be 1000+ px per side) — keeps the generated image small and the downsampling loop below fast. */
+  const EXPLORED_OVERLAY_MAX_RES = 512;
+
+  /**
+   * Builds the fog-of-war overlay as a single Cytoscape rectangle node with
+   * a raster image (an opaque-where-explored, transparent-where-not PNG)
+   * as its background, sized and centered in world coordinates so it lines
+   * up exactly with every pin/point on the same map.
+   *
+   * The grid is downsampled to at most {@link EXPLORED_OVERLAY_MAX_RES}
+   * per side — a save's real `textureSize` is often 1000+ px/side (several
+   * million cells), which is both overkill for a small map thumbnail and
+   * slow to iterate pixel-by-pixel in JS. Downsampling counts an output
+   * block as explored if *any* source cell within it is, so isolated
+   * explored pixels don't get diluted away into invisibility.
+   *
+   * Image rows run north (+world Z) at the top down to south at the
+   * bottom, and columns run west (-X) to east (+X) — matching the
+   * existing pin/point convention of plotting `{x: worldX, y: -worldZ}`
+   * (see the `addPoint` calls in {@link initPinMap}), confirmed against
+   * `Minimap.WorldToPixel()`: `px = worldX/pixelSize + textureSize/2`,
+   * `py = worldZ/pixelSize + textureSize/2` — i.e. the grid's row index
+   * increases with world Z, the opposite of "north at the top", so the row
+   * order has to be flipped when rasterizing.
+   * @param {object} w - A parsed world entry (needs `exploredGrid`, `textureSize`, `pixelSize` — see {@link parseWorldReal}).
+   * @returns {object|null} A Cytoscape element definition, or `null` when this world has no exploration data.
+   */
+  function buildExploredOverlayElement(w) {
+    if (!w.exploredGrid || !w.textureSize) return null;
+    // initPinMap calls this before its own try/catch even starts, so any
+    // failure here (canvas unsupported, an unexpectedly malformed grid,
+    // running out of memory on a huge textureSize, ...) must not throw and
+    // take the whole pin map down with it — just skip the overlay.
+    try {
+      const textureSize = w.textureSize;
+      const othersGrid = w.exploredOthersGrid;
+      const outSize = Math.min(textureSize, EXPLORED_OVERLAY_MAX_RES);
+      const block = textureSize / outSize;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outSize;
+      canvas.height = outSize;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      const image = ctx.createImageData(outSize, outSize);
+      for (let oy = 0; oy < outSize; oy++) {
+        // Flip vertically: image row 0 (top) should be the northmost
+        // (highest world Z / highest source row) block — see the doc
+        // comment above.
+        const srcOy = outSize - 1 - oy;
+        const y0 = Math.floor(srcOy * block), y1 = Math.floor((srcOy + 1) * block);
+        for (let ox = 0; ox < outSize; ox++) {
+          const x0 = Math.floor(ox * block), x1 = Math.floor((ox + 1) * block);
+          let explored = false;
+          for (let y = y0; y < y1 && !explored; y++) {
+            const rowBase = y * textureSize;
+            for (let x = x0; x < x1; x++) {
+              if (w.exploredGrid[rowBase + x] !== 0 || (othersGrid && othersGrid[rowBase + x] !== 0)) { explored = true; break; }
+            }
+          }
+          const di = (oy * outSize + ox) * 4;
+          if (explored) {
+            image.data[di] = 203; image.data[di + 1] = 185; image.data[di + 2] = 153; image.data[di + 3] = 90;
+          } // else leave fully transparent (alpha 0), the default for a fresh ImageData
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+
+      const worldSize = textureSize * w.pixelSize;
+      return {
+        data: { id: "explored", kind: "explored" },
+        position: { x: 0, y: 0 },
+        // width/height/image genuinely vary per world, so these are inline
+        // per-element overrides rather than a shared `node[kind=...]`
+        // selector (which handles the world-independent styling instead —
+        // see the `style:` array in initPinMap).
+        style: { width: worldSize, height: worldSize, "background-image": canvas.toDataURL("image/png") }
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   /**
    * Plots a world's pins and spawn/logout/death/home points as a spatial
    * scatter (no edges — Cytoscape is used here purely for its zoomable,
@@ -2003,13 +2157,20 @@
    * coordinates, so relative distances are preserved. Names starting with
    * "$" are game-generated markers (bestiary/event pins) rather than
    * something the player typed, so they're plotted small and unlabeled to
-   * avoid cluttering the map with internal tokens.
+   * avoid cluttering the map with internal tokens. Also plots the
+   * fog-of-war explored area as a background layer — see
+   * {@link buildExploredOverlayElement}.
    * @param {HTMLElement} container - Must already be attached to the visible DOM with a non-zero size.
    * @param {object} w - The world entry to plot.
    * @returns {import('cytoscape').Core|null} The Cytoscape instance, or `null` if nothing could be plotted.
    */
   function initPinMap(container, w) {
     const elements = [];
+    // Added first (and never removed/reordered) so it stays furthest back —
+    // Cytoscape draws same-z-index elements in array order, and every pin/
+    // point needs to render on top of the fog-of-war layer, not under it.
+    const overlay = buildExploredOverlayElement(w);
+    if (overlay) elements.push(overlay);
     /** @param {string} id @param {string} label @param {string} kind @param {[number,number,number]} pt */
     const addPoint = (id, label, kind, pt) => elements.push({ data: { id, label, kind }, position: { x: pt[0], y: -pt[2] } });
     if (w.haveSpawn) addPoint("spawn", "Spawn / Respawn", "spawn", w.spawn);
@@ -2017,9 +2178,10 @@
     if (w.hasDeath) addPoint("death", "Last Death", "death", w.death);
     addPoint("home", "Home", "home", w.home);
     (w.pins || []).forEach((m, i) => {
-      const isAuto = !!(m.name && m.name.charAt(0) === "$");
+      const isBoss = m.pinType === 9; // Minimap.PinType.Boss — see PIN_TYPE_NAMES
+      const isAuto = !isBoss && !!(m.name && m.name.charAt(0) === "$");
       elements.push({
-        data: { id: "pin" + i, label: isAuto ? "" : (m.name || ""), kind: isAuto ? "auto" : "pin" },
+        data: { id: "pin" + i, label: isAuto ? "" : (m.name || ""), kind: isBoss ? "boss" : (isAuto ? "auto" : "pin") },
         position: { x: m.pos[0], y: -m.pos[2] }
       });
     });
@@ -2054,11 +2216,27 @@
           { selector: 'node[kind = "spawn"]', style: { "background-color": "#6fa06a", "shape": "triangle", "width": 14, "height": 14 } },
           { selector: 'node[kind = "logout"]', style: { "background-color": "#6a8caf", "shape": "diamond", "width": 14, "height": 14 } },
           { selector: 'node[kind = "death"]', style: { "background-color": "#c15b4a", "shape": "square", "width": 12, "height": 12 } },
-          { selector: 'node[kind = "auto"]', style: { "background-color": "#4a4033", "width": 5, "height": 5, "border-width": 0 } }
+          { selector: 'node[kind = "auto"]', style: { "background-color": "#4a4033", "width": 5, "height": 5, "border-width": 0 } },
+          // A custom skull icon here (via background-image on an ellipse)
+          // visibly jittered as the map was panned/zoomed — Cytoscape
+          // recomputes an ellipse's image clip path per frame. A plain
+          // solid-color circle, like every other kind above, has no such
+          // issue since there's no image to reclip.
+          { selector: 'node[kind = "boss"]', style: { "background-color": "#8b1a1a", "width": 15, "height": 15 } },
+          // World-independent part of the explored-overlay style; width/
+          // height/background-image are set per-element instead (see
+          // buildExploredOverlayElement) since they vary per world.
+          { selector: 'node[kind = "explored"]', style: {
+            "shape": "rectangle", "background-color": "transparent",
+            "background-fit": "cover", "background-clip": "node",
+            "border-width": 0, "label": "", "events": "no"
+          } }
         ]
       });
       cy.fit(undefined, 40);
-      cy.on("tap", "node", (evt) => showPointDetails(evt.target.id()));
+      cy.on("tap", "node", (evt) => {
+        if (evt.target.id() !== "explored") showPointDetails(evt.target.id());
+      });
       return cy;
     } catch (e) {
       container.appendChild(empty("Could not render the pin map: " + e.message));
@@ -2186,13 +2364,19 @@
   }
 
   /**
-   * Builds the Checksum card body.
+   * Builds the Checksum card body: the hex digest, plus a validity
+   * indicator from independently recomputing it (see {@link verifyChecksum}).
    * @param {string} hex
+   * @param {boolean|undefined} valid - `true`/`false` if checked, `undefined` if this browser couldn't check (no Web Crypto).
    * @returns {HTMLElement}
    */
-  function renderChecksum(hex) {
+  function renderChecksum(hex, valid) {
     const el = clone("tpl-checksum");
-    el.textContent = hex;
+    el.querySelector(".checksum-text").textContent = hex;
+    const status = el.querySelector(".checksum-status");
+    if (valid === true) { status.textContent = "✓ Valid"; status.classList.add("valid"); }
+    else if (valid === false) { status.textContent = "✗ Invalid — data doesn't match this checksum"; status.classList.add("invalid"); }
+    else { status.textContent = "(could not verify)"; status.classList.add("unknown"); }
     return el;
   }
 
@@ -2565,7 +2749,7 @@
       const panel = document.createElement("div");
       panel.id = "worldPanel";
       panel.dataset.sectionTitle = "World Details";
-      panel.dataset.sectionDescription = "Per-world spawn/logout/death/home points, map pins, and an interactive pin map. Use the World selector below to switch worlds.";
+      panel.dataset.sectionDescription = "Per-world spawn/logout/death/home points, map pins, and an interactive pin map with your explored territory shown as fog-of-war. Use the World selector below to switch worlds.";
       const desc = document.createElement("p");
       desc.className = "section-desc";
       desc.textContent = panel.dataset.sectionDescription;
