@@ -166,12 +166,12 @@
   }
   .section-nav button:hover:not(:disabled) { border-color: var(--accent); }
   .section-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
-  #resetBtn {
+  #resetBtn, #clearKnownDataBtn {
     background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
     padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
-    margin-left: auto;
   }
-  #resetBtn:hover { border-color: var(--accent); }
+  #resetBtn { margin-left: auto; }
+  #resetBtn:hover, #clearKnownDataBtn:hover { border-color: var(--danger); }
   .toprow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .picker-bar {
     display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
@@ -180,10 +180,16 @@
   }
   #worldPanel > .picker-bar { margin-bottom: 1rem; }
   .picker-bar label { color: var(--muted); font-size: 0.85rem; }
-  .picker-bar select {
+  .picker-bar select, .picker-bar input[type="text"] {
     background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
-    padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 200px;
+    padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 160px;
   }
+  .picker-bar input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  .picker-bar button.primary-btn {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; flex-shrink: 0;
+  }
+  .picker-bar button.primary-btn:hover { border-color: var(--accent); }
   .pin-map-legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.72rem; color: var(--muted); margin: 0.6rem 0 0.5rem; align-items: center; }
   .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   .legend-home { background: #c99a44; }
@@ -294,10 +300,12 @@
   <button type="button" id="tabSingle" class="view-tab active">Single View</button>
   <button type="button" id="tabCompare" class="view-tab" disabled>Compare</button>
   <button type="button" id="tabPlayers" class="view-tab">Known Players</button>
+  <button type="button" id="tabWorlds" class="view-tab">Known World Data</button>
 </div>
 
 <div class="toprow">
-  <button id="resetBtn" style="display:none;">Clear all</button>
+  <button id="clearKnownDataBtn" title="Forgets every remembered player name/Steam ID and World UID↔Name association — not the loaded files themselves.">Clear all stored data</button>
+  <button id="resetBtn" style="display:none;">Clear all player files</button>
 </div>
 
 <div id="notes"></div>
@@ -305,6 +313,7 @@
 <div id="output"></div>
 <div id="compareOutput" style="display:none;"></div>
 <div id="playersOutput" style="display:none;"></div>
+<div id="worldsOutput" style="display:none;"></div>
 
 <footer class="credits">
   <p>Valheim's <span class="mono">.fch</span>/<span class="mono">.fwl</span> save format isn't officially documented, and the 1.0 release changed it enough that even community references are out of date. This viewer wouldn't exist without:</p>
@@ -434,6 +443,17 @@
     <button type="button" class="char-select-btn"></button>
     <button type="button" class="char-remove-btn" title="Remove this character">✕</button>
   </div>
+</template>
+
+<template id="tpl-table-worlds">
+  <table><thead><tr><th>World UID</th><th>World Name</th><th></th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-world">
+  <tr>
+    <td class="mono cell-uid"></td>
+    <td class="cell-name"></td>
+    <td><button type="button" class="char-remove-btn" title="Remove this association">✕</button></td>
+  </tr>
 </template>
 
 <template id="tpl-table-compare">
@@ -1971,6 +1991,150 @@
   }
 
   /**
+   * Adds or completes a World UID <-> World Name association. If either
+   * value matches an existing association's non-empty field, that
+   * association is updated in place (filling in/overwriting the other
+   * field) rather than creating a duplicate — this is what lets you type
+   * in just a UID now and its Name later (or vice versa) to complete the
+   * same entry. Persists immediately.
+   * @param {string} uid
+   * @param {string} name
+   */
+  function saveWorldAssociation(uid, name) {
+    uid = (uid || "").trim();
+    name = (name || "").trim();
+    if (!uid && !name) return;
+    const existing = knownWorldAssociations.find(a => (uid && a.uid === uid) || (name && a.name === name));
+    if (existing) {
+      if (uid) existing.uid = uid;
+      if (name) existing.name = name;
+    } else {
+      knownWorldAssociations.push({ uid, name });
+    }
+    saveKnownWorlds(knownWorldAssociations);
+  }
+
+  /** @param {number} index - Position in {@link knownWorldAssociations}. */
+  function removeWorldAssociation(index) {
+    knownWorldAssociations.splice(index, 1);
+    saveKnownWorlds(knownWorldAssociations);
+    renderKnownWorldsView();
+  }
+
+  /**
+   * Gathers every World UID and World Name worth suggesting while typing
+   * in the "Known World Data" add/complete form — not just complete
+   * associations, but also the "loose ends": a UID that's shown up in a
+   * loaded character but has no name yet, or a name a character
+   * self-reports (see `withSelfKnownWorldName`) that isn't linked to a UID
+   * yet. Surfacing both lets you spot-check "does this loose UID and that
+   * loose name actually belong together?" and complete the pairing by
+   * typing/picking one and letting `saveWorldAssociation`'s match-by-either
+   * -field logic do the linking.
+   * @returns {{uids: string[], names: string[]}}
+   */
+  function collectWorldSuggestions() {
+    const uids = new Set();
+    const names = new Set();
+    knownWorldAssociations.forEach(a => {
+      if (a.uid) uids.add(a.uid);
+      if (a.name) names.add(a.name);
+    });
+    loadedCharacters.forEach(({ result }) => {
+      const d = result.data;
+      (d.worlds || []).forEach(w => { if (w.uid) uids.add(w.uid); });
+      (d.playerStats || []).forEach(block => {
+        Object.keys(block.knownWorlds || {}).forEach(n => names.add(n));
+      });
+    });
+    return { uids: Array.from(uids), names: Array.from(names) };
+  }
+
+  /**
+   * Builds the "Known World Data" tab: a small add/complete form plus a
+   * table of every saved World UID <-> Name association (see
+   * {@link knownWorldAssociations}). Unlike Known Players, this data is
+   * entirely manual — the character file never records which name belongs
+   * to which numeric world ID (see `withSelfKnownWorldName`), so this is
+   * how you fill that gap in yourself, once, and have it remembered
+   * (persisted — see {@link saveKnownWorlds}) and applied everywhere a
+   * world name is shown from then on. The UID/Name inputs get native
+   * autocomplete (via `<datalist>`) fed by {@link collectWorldSuggestions},
+   * so unpaired UIDs/names are easy to spot and complete.
+   */
+  function renderKnownWorldsView() {
+    const worldsOutputEl = document.getElementById("worldsOutput");
+    worldsOutputEl.textContent = "";
+
+    const suggestions = collectWorldSuggestions();
+    const uidList = document.createElement("datalist");
+    uidList.id = "worldUidSuggestions";
+    suggestions.uids.forEach(u => {
+      const opt = document.createElement("option");
+      opt.value = u;
+      uidList.appendChild(opt);
+    });
+    const nameList = document.createElement("datalist");
+    nameList.id = "worldNameSuggestions";
+    suggestions.names.forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      nameList.appendChild(opt);
+    });
+
+    const formBar = document.createElement("div");
+    formBar.className = "picker-bar";
+    const uidInput = document.createElement("input");
+    uidInput.type = "text"; uidInput.placeholder = "World UID"; uidInput.className = "mono";
+    uidInput.setAttribute("list", "worldUidSuggestions");
+    const nameInput = document.createElement("input");
+    nameInput.type = "text"; nameInput.placeholder = "World Name";
+    nameInput.setAttribute("list", "worldNameSuggestions");
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button"; saveBtn.className = "primary-btn"; saveBtn.textContent = "Save";
+    const doSave = () => {
+      saveWorldAssociation(uidInput.value, nameInput.value);
+      uidInput.value = "";
+      nameInput.value = "";
+      renderKnownWorldsView();
+    };
+    saveBtn.addEventListener("click", doSave);
+    [uidInput, nameInput].forEach(input => input.addEventListener("keydown", e => { if (e.key === "Enter") doSave(); }));
+    formBar.appendChild(uidInput);
+    formBar.appendChild(uidList);
+    formBar.appendChild(nameInput);
+    formBar.appendChild(nameList);
+    formBar.appendChild(saveBtn);
+
+    const body = document.createElement("div");
+    body.appendChild(formBar);
+
+    if (knownWorldAssociations.length) {
+      const table = clone("tpl-table-worlds");
+      const tbody = table.querySelector("tbody");
+      knownWorldAssociations.forEach((assoc, i) => {
+        const row = clone("tpl-row-world");
+        row.querySelector(".cell-uid").textContent = assoc.uid || "—";
+        row.querySelector(".cell-name").textContent = assoc.name || "—";
+        row.querySelector(".char-remove-btn").addEventListener("click", () => removeWorldAssociation(i));
+        tbody.appendChild(row);
+      });
+      const tableWrap = document.createElement("div");
+      tableWrap.style.marginTop = "0.9rem";
+      tableWrap.appendChild(table);
+      body.appendChild(tableWrap);
+    } else {
+      const emptyWrap = document.createElement("div");
+      emptyWrap.style.marginTop = "0.9rem";
+      emptyWrap.appendChild(empty("No world associations saved yet."));
+      body.appendChild(emptyWrap);
+    }
+
+    worldsOutputEl.appendChild(card("Known World Data", knownWorldAssociations.length, body,
+      "Manually-entered World UID ↔ World Name associations, remembered across sessions (and across removing/re-adding character files). Type a World UID and/or Name and click Save — if either value matches an existing row, that row is completed/updated instead of creating a duplicate. Used to resolve world names in World Details and Playtime by World Name wherever the character file itself can't."));
+  }
+
+  /**
    * Builds the vitals + appearance portion of the Overview card. Returns an
    * empty fragment when there's no live player data — the Overview grid's
    * "Has Live Player Data: No" tile already covers that case.
@@ -2269,18 +2433,32 @@
   let selectedCharacterId = null;
   /** Monotonic counter for character ids — never reused, so duplicate-filename uploads and removals stay unambiguous (array index/filename would not). */
   let nextCharacterId = 1;
-  /** Which top-level tab is showing. @type {"single"|"compare"|"players"} */
+  /** Which top-level tab is showing. @type {"single"|"compare"|"players"|"worlds"} */
   let activeView = "single";
   /**
-   * Best-known {name, steamId} for every player ID seen across ALL loaded
-   * characters (not just the one currently shown) — see
+   * Best-known {name, steamId} for every player ID ever seen, across every
+   * character loaded this session AND every previous session (persisted —
+   * see {@link loadKnownPlayers}/{@link saveKnownPlayers}) — see
    * {@link rebuildGlobalPlayerRegistry}. This is a deliberate, narrow
    * exception to "comparison never merges data between characters": it's
    * about identifying people (a player ID is the same real person no
-   * matter which save mentions them), not comparing stats.
+   * matter which save mentions them), not comparing stats. Once learned, an
+   * identity is remembered even after the file that resolved it is
+   * removed — only the "Clear all stored data" button forgets it (see
+   * {@link clearKnownData}).
    * @type {Map<string,{name: string, steamId: string|undefined}>}
    */
-  let globalPlayerRegistry = new Map();
+  let globalPlayerRegistry = loadKnownPlayers();
+  /**
+   * Manually-entered World UID <-> World Name associations — the character
+   * file never records this link itself (see withSelfKnownWorldName), so
+   * this lets you fill it in yourself once and have it remembered/applied
+   * everywhere a world name is shown, persisted across sessions. Either
+   * field can be left blank until you learn it — see the Known World Data
+   * tab (renderKnownWorldsView).
+   * @type {{uid: string, name: string}[]}
+   */
+  let knownWorldAssociations = loadKnownWorlds();
 
   /** Cap on the fog-of-war overlay's rendered resolution, regardless of the save's own textureSize (which can be 1000+ px per side) — keeps the generated image small and the downsampling loop below fast. */
   const EXPLORED_OVERLAY_MAX_RES = 512;
@@ -2616,6 +2794,122 @@
     try { localStorage.setItem(key, title); } catch (e) { /* private browsing, quota, etc. — fine to skip */ }
   }
 
+  // ---------- Persistence: uploaded files, known players, known worlds ----------
+  // All best-effort — every localStorage access is wrapped in try/catch, so
+  // this silently degrades to "nothing persists this session" in private
+  // browsing, with storage disabled, or once the quota is full, exactly
+  // like the section-selection persistence above.
+
+  /** localStorage key for the raw bytes (base64) of every uploaded .fch file, so they're still there after closing the tab. */
+  const CHARACTERS_STORAGE_KEY = "valheim-viewer-stored-characters";
+  /** localStorage key for the merged cross-character player identity registry (see {@link globalPlayerRegistry}) — persists even after the file that resolved a name is removed. */
+  const KNOWN_PLAYERS_STORAGE_KEY = "valheim-viewer-known-players";
+  /** localStorage key for manually-entered World UID <-> World Name associations (see {@link knownWorldAssociations}). */
+  const KNOWN_WORLDS_STORAGE_KEY = "valheim-viewer-known-worlds";
+
+  /**
+   * @param {ArrayBuffer} buffer
+   * @returns {string} base64
+   */
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 0x8000; // avoid blowing the call stack on String.fromCharCode.apply for a large file
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * @param {string} base64
+   * @returns {ArrayBuffer}
+   */
+  function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  /** @returns {{id: number, fileName: string, base64: string}[]} Persisted files, or `[]` if none/unavailable. */
+  function loadStoredCharacterFiles() {
+    try {
+      const raw = localStorage.getItem(CHARACTERS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+
+  /** @param {{id: number, fileName: string, base64: string}[]} files */
+  function saveStoredCharacterFiles(files) {
+    try { localStorage.setItem(CHARACTERS_STORAGE_KEY, JSON.stringify(files)); }
+    catch (e) { surfaceUploadFailures(["Could not save file(s) for next time — browser storage may be full or disabled."]); }
+  }
+
+  /**
+   * Adds one freshly-uploaded file's raw bytes to persisted storage.
+   * @param {number} id - Matches the in-memory `loadedCharacters` entry's id.
+   * @param {string} fileName
+   * @param {ArrayBuffer} buffer
+   */
+  function persistCharacterFile(id, fileName, buffer) {
+    const files = loadStoredCharacterFiles();
+    files.push({ id, fileName, base64: arrayBufferToBase64(buffer) });
+    saveStoredCharacterFiles(files);
+  }
+
+  /** @param {number} id */
+  function removeStoredCharacterFile(id) {
+    saveStoredCharacterFiles(loadStoredCharacterFiles().filter(f => f.id !== id));
+  }
+
+  /** Removes every persisted .fch file (not known players/worlds — see the separate "Clear all stored data" action). */
+  function clearStoredCharacterFiles() {
+    try { localStorage.removeItem(CHARACTERS_STORAGE_KEY); } catch (e) { /* nothing to clean up then */ }
+  }
+
+  /** @returns {Map<string,{name: string, steamId: string|undefined}>} */
+  function loadKnownPlayers() {
+    try {
+      const raw = localStorage.getItem(KNOWN_PLAYERS_STORAGE_KEY);
+      if (!raw) return new Map();
+      const obj = JSON.parse(raw);
+      return new Map(Object.entries(obj));
+    } catch (e) { return new Map(); }
+  }
+
+  /** @param {Map<string,{name: string, steamId: string|undefined}>} players */
+  function saveKnownPlayers(players) {
+    try { localStorage.setItem(KNOWN_PLAYERS_STORAGE_KEY, JSON.stringify(Object.fromEntries(players))); }
+    catch (e) { /* best-effort — a full quota here just means this session's discoveries won't carry over */ }
+  }
+
+  /** @returns {{uid: string, name: string}[]} */
+  function loadKnownWorlds() {
+    try {
+      const raw = localStorage.getItem(KNOWN_WORLDS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+
+  /** @param {{uid: string, name: string}[]} associations */
+  function saveKnownWorlds(associations) {
+    try { localStorage.setItem(KNOWN_WORLDS_STORAGE_KEY, JSON.stringify(associations)); }
+    catch (e) { /* best-effort */ }
+  }
+
+  /** Clears the persistent Known Players and Known World Data stores (not loaded/persisted character files — see the separate "Clear all player files" action). */
+  function clearKnownData() {
+    globalPlayerRegistry = new Map();
+    knownWorldAssociations = [];
+    try {
+      localStorage.removeItem(KNOWN_PLAYERS_STORAGE_KEY);
+      localStorage.removeItem(KNOWN_WORLDS_STORAGE_KEY);
+    } catch (e) { /* nothing to clean up then */ }
+  }
+
   /**
    * Set by {@link buildSectionSelector} to its internal `selectSection`
    * closure once the picker exists, so other parts of the page (e.g. a
@@ -2730,13 +3024,24 @@
    */
   function withSelfKnownWorldName(d) {
     const merged = {};
-    if (!d.worlds || !d.worlds.length || !d.playerStats || !d.playerStats.length) return merged;
-    const names = new Set();
-    d.playerStats.forEach(block => { for (const n of Object.keys(block.knownWorlds || {})) names.add(n); });
-    if (names.size !== 1) return merged;
-    const [onlyName] = names;
-    const target = d.worlds.find(w => w.haveSpawn) || d.worlds[0];
-    if (!merged[target.uid]) merged[target.uid] = onlyName;
+    if (!d.worlds || !d.worlds.length) return merged;
+    if (d.playerStats && d.playerStats.length) {
+      const names = new Set();
+      d.playerStats.forEach(block => { for (const n of Object.keys(block.knownWorlds || {})) names.add(n); });
+      if (names.size === 1) {
+        const [onlyName] = names;
+        const target = d.worlds.find(w => w.haveSpawn) || d.worlds[0];
+        merged[target.uid] = onlyName;
+      }
+    }
+    // Manually-entered associations (see the "Known World Data" tab /
+    // knownWorldAssociations) are the more authoritative, deliberate
+    // source — they override the single-world heuristic above, and work
+    // for any number of worlds, not just the one-distinct-name case.
+    d.worlds.forEach(w => {
+      const assoc = knownWorldAssociations.find(a => a.uid === w.uid && a.name);
+      if (assoc) merged[w.uid] = assoc.name;
+    });
     return merged;
   }
 
@@ -2829,30 +3134,26 @@
   }
 
   /**
-   * Rebuilds {@link globalPlayerRegistry} by merging {@link collectKnownPlayersRaw}'s
-   * output across every currently-loaded character — the RAW collector is
-   * essential here, not something that itself reads `globalPlayerRegistry`:
-   * folding already-enriched data back into the registry would let a name
-   * learned from a since-removed character persist forever (it'd keep
-   * "enriching" the very registry it originally came from, each rebuild
-   * re-deriving it from itself instead of from what's actually still
-   * loaded). Called whenever `loadedCharacters` changes (a file is added or
-   * removed) — a removal can reduce global knowledge too, correctly: e.g.
-   * removing the one file that had a player's real name means everyone
-   * else falls back to their own raw `Steam_<id>` again. Must run before
-   * the next render so the pin-owner fallback in `renderWorldCard`, the
-   * inventory-crafter fallback in `renderInventory`, and the "Known
-   * Players" tab (see `renderKnownPlayersView`) all see up-to-date data —
-   * all three now read this registry directly rather than through a
-   * per-file wrapper, since Known Players moved from a per-character
-   * Single View section to its own cross-character top-level tab.
+   * Folds {@link collectKnownPlayersRaw}'s output for every currently-
+   * loaded character INTO {@link globalPlayerRegistry} (the RAW collector
+   * is essential here, not something that itself reads
+   * `globalPlayerRegistry` — that would just be re-deriving the registry
+   * from itself). Deliberately additive/persistent, never reset first:
+   * once a player's identity is learned it's remembered even after the
+   * file that resolved it is removed (and across browser sessions — see
+   * {@link saveKnownPlayers}) — only the explicit "Clear all stored data"
+   * action (see `clearKnownData`) forgets it. Called whenever
+   * `loadedCharacters` changes (a file is added or removed), so the
+   * pin-owner fallback in `renderWorldCard`, the inventory-crafter
+   * fallback in `renderInventory`, and the "Known Players" tab (see
+   * `renderKnownPlayersView`) all see up-to-date data — all three read
+   * this registry directly.
    */
   function rebuildGlobalPlayerRegistry() {
-    const merged = new Map();
     loadedCharacters.forEach(({ result }) => {
       collectKnownPlayersRaw(result.data).forEach((entry, id) => {
-        const existing = merged.get(id);
-        if (!existing) { merged.set(id, { name: entry.name, steamId: entry.steamId }); return; }
+        const existing = globalPlayerRegistry.get(id);
+        if (!existing) { globalPlayerRegistry.set(id, { name: entry.name, steamId: entry.steamId }); return; }
         if (!existing.name && entry.name) existing.name = entry.name;
         if (!existing.steamId && entry.steamId) existing.steamId = entry.steamId;
       });
@@ -2862,8 +3163,58 @@
     // itself would show, so every consumer of this registry (the pin-owner
     // and inventory-crafter fallbacks, the Known Players tab) can just read
     // `.name` without re-implementing this fallback themselves.
-    merged.forEach(entry => { if (!entry.name && entry.steamId) entry.name = "Steam_" + entry.steamId; });
-    globalPlayerRegistry = merged;
+    globalPlayerRegistry.forEach(entry => { if (!entry.name && entry.steamId) entry.name = "Steam_" + entry.steamId; });
+    saveKnownPlayers(globalPlayerRegistry);
+  }
+
+  /**
+   * Auto-learns one World UID <-> Name pair from a single character's data,
+   * using the same single-distinct-name heuristic as
+   * {@link withSelfKnownWorldName} (deliberately does nothing when a
+   * character knows more than one world name — no reliable way to tell
+   * which name belongs to which UID from the file alone). Only fills in
+   * whichever field(s) of a matching {@link knownWorldAssociations} row are
+   * still empty — it never overwrites a UID or name that's already set, so
+   * a manual correction made in the "Known World Data" tab (or a
+   * previously auto-learned value) always wins over what a freshly-read
+   * file would guess.
+   * @param {object} d - `result.data`.
+   * @returns {boolean} Whether an association was added or completed.
+   */
+  function learnWorldAssociationFromCharacter(d) {
+    if (!d.worlds || !d.worlds.length || !d.playerStats || !d.playerStats.length) return false;
+    const names = new Set();
+    d.playerStats.forEach(block => { for (const n of Object.keys(block.knownWorlds || {})) names.add(n); });
+    if (names.size !== 1) return false;
+    const [onlyName] = names;
+    const target = d.worlds.find(w => w.haveSpawn) || d.worlds[0];
+    const existing = knownWorldAssociations.find(a => a.uid === target.uid || a.name === onlyName);
+    if (existing) {
+      let changed = false;
+      if (!existing.uid) { existing.uid = target.uid; changed = true; }
+      if (!existing.name) { existing.name = onlyName; changed = true; }
+      return changed;
+    }
+    knownWorldAssociations.push({ uid: target.uid, name: onlyName });
+    return true;
+  }
+
+  /**
+   * Runs {@link learnWorldAssociationFromCharacter} across every loaded
+   * character and persists {@link knownWorldAssociations} if anything
+   * changed. Called at the same points as {@link rebuildGlobalPlayerRegistry}
+   * so reading in `.fch` files (fresh uploads or restored-from-storage on
+   * page load) keeps "Known World Data" up to date automatically, not just
+   * via manual entry. Deliberately never removes/un-learns an association
+   * when a character is removed — same "once learned, remembered" rule as
+   * the player registry; only "Clear all stored data" forgets it.
+   */
+  function rebuildKnownWorldAssociations() {
+    let changed = false;
+    loadedCharacters.forEach(({ result }) => {
+      if (learnWorldAssociationFromCharacter(result.data)) changed = true;
+    });
+    if (changed) saveKnownWorlds(knownWorldAssociations);
   }
 
   /**
@@ -3165,10 +3516,15 @@
    * has the single highest value on ANY character comes first — surfaces
    * "who dominates this category" rather than "what's the biggest combined
    * total". Reuses {@link buildListView} for the same search + pagination
-   * every other list in this viewer already has.
+   * every other list in this viewer already has. Highlights both the best
+   * (green, `.cmp-best`) and worst (red, `.cmp-worst`) value per row, same
+   * as {@link renderComparisonLeaderboard} — with `zeroText` categories
+   * (e.g. "Playtime by World Name") treating 0 as "not applicable" rather
+   * than a real worst-of-the-group value, so it's excluded from the worst
+   * calculation entirely.
    * @param {{id: number, result: object}[]} characters
    * @param {Map<number,string>} labels
-   * @param {{title: string, description: string, nameLabel: string, extractMap: (result: object) => (Object<string,number>|undefined), formatValue?: (v: number) => string, zeroText?: string, invertBest?: boolean}} opts - `invertBest` highlights the LOWEST value per row instead of the highest (for "less is better" categories, e.g. Deaths).
+   * @param {{title: string, description: string, nameLabel: string, extractMap: (result: object) => (Object<string,number>|undefined), formatValue?: (v: number) => string, zeroText?: string, invertBest?: boolean}} opts - `invertBest` swaps best/worst so the LOWEST value per row is "best" (for "less is better" categories, e.g. Deaths).
    * @returns {HTMLElement}
    */
   function renderComparisonCategory(characters, labels, opts) {
@@ -3201,10 +3557,24 @@
         row.querySelector(".cell-name").textContent = r.name;
         const best = opts.invertBest ? Math.min(...r.values) : Math.max(...r.values);
         const allTied = r.values.every(v => v === r.values[0]);
+        // A 0 under `zeroText` means "not applicable" (e.g. never played
+        // that world), not a real worst-of-the-group data point — exclude
+        // those from the "worst" calculation entirely (not just from being
+        // highlighted), otherwise a single never-played entry would make
+        // nearly every row's "worst" the same meaningless N/A cell instead
+        // of whoever's actual lowest real value is.
+        const comparableForWorst = opts.zeroText !== undefined ? r.values.filter(v => v !== 0) : r.values;
+        const worst = comparableForWorst.length
+          ? (opts.invertBest ? Math.max(...comparableForWorst) : Math.min(...comparableForWorst))
+          : undefined;
         r.values.forEach(v => {
           const td = document.createElement("td");
-          td.textContent = (v === 0 && opts.zeroText !== undefined) ? opts.zeroText : formatValue(v);
-          if (!allTied && v === best && (opts.invertBest || best > 0)) td.classList.add("cmp-best");
+          const isNA = v === 0 && opts.zeroText !== undefined;
+          td.textContent = isNA ? opts.zeroText : formatValue(v);
+          if (!allTied) {
+            if (v === best && (opts.invertBest || best > 0)) td.classList.add("cmp-best");
+            else if (!isNA && v === worst) td.classList.add("cmp-worst");
+          }
           row.appendChild(td);
         });
         return row;
@@ -3286,6 +3656,7 @@
   const dropzone = document.getElementById("dropzone");
   const fileInput = document.getElementById("fileInput");
   const resetBtn = document.getElementById("resetBtn");
+  const clearKnownDataBtn = document.getElementById("clearKnownDataBtn");
   const findFileHelp = document.getElementById("findFileHelp");
   const characterListEl = document.getElementById("characterList");
   const uploadErrorsEl = document.getElementById("uploadErrors");
@@ -3293,9 +3664,11 @@
   const tabSingleBtn = document.getElementById("tabSingle");
   const tabCompareBtn = document.getElementById("tabCompare");
   const tabPlayersBtn = document.getElementById("tabPlayers");
+  const tabWorldsBtn = document.getElementById("tabWorlds");
   const outputEl = document.getElementById("output");
   const compareOutputEl = document.getElementById("compareOutput");
   const playersOutputEl = document.getElementById("playersOutput");
+  const worldsOutputEl = document.getElementById("worldsOutput");
 
   /**
    * @param {File} file
@@ -3400,12 +3773,14 @@
         const entry = { id: nextCharacterId++, fileName: file.name, result };
         loadedCharacters.push(entry);
         if (selectedCharacterId === null) selectedCharacterId = entry.id;
+        persistCharacterFile(entry.id, file.name, buffer);
       } catch (e) {
         failures.push(file.name + ": " + e.message);
       }
     }
 
     rebuildGlobalPlayerRegistry();
+    rebuildKnownWorldAssociations();
     if (failures.length) surfaceUploadFailures(failures);
     refreshCharacterListUI();
     renderActiveView();
@@ -3437,7 +3812,11 @@
 
     const hasAny = loadedCharacters.length > 0;
     characterListEl.style.display = hasAny ? "flex" : "none";
-    viewTabs.style.display = hasAny ? "flex" : "none";
+    // The tab bar itself is always visible now, regardless of whether any
+    // character is loaded — Known Players and Known World Data are
+    // persistent, independent of any currently-loaded file, and should
+    // stay reachable even with nothing (or nothing yet) uploaded.
+    viewTabs.style.display = "flex";
     // Compare always covers every loaded character — no more per-character
     // checkbox to include/exclude one; if you don't want someone in the
     // comparison, remove them (✕) entirely.
@@ -3450,9 +3829,13 @@
   /**
    * Removes one loaded character — the only way to exclude someone from
    * Compare too, now that Compare always covers every loaded character.
-   * If it was the one shown in Single View, falls back to a neighboring
-   * character (or clears everything if none remain) and tears down the
-   * live pin map — but only in that case; removing a character that isn't
+   * Also deletes that file's persisted copy (see
+   * {@link removeStoredCharacterFile}) so it doesn't come back on next
+   * load; player identities it contributed to {@link globalPlayerRegistry}
+   * are NOT forgotten though — see `clearKnownData` for that. If it was
+   * the one shown in Single View, falls back to a neighboring character
+   * (or clears everything if none remain) and tears down the live pin
+   * map — but only in that case; removing a character that isn't
    * currently on screen must not touch `pinMapInstance`/`worldsState` at
    * all, since those belong to whichever character `render()` was last
    * called for.
@@ -3462,6 +3845,7 @@
     const idx = loadedCharacters.findIndex(c => c.id === id);
     if (idx === -1) return;
     loadedCharacters.splice(idx, 1);
+    removeStoredCharacterFile(id);
 
     if (selectedCharacterId === id) {
       if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
@@ -3496,6 +3880,7 @@
     outputEl.style.display = "none";
     compareOutputEl.style.display = "none";
     playersOutputEl.style.display = "none";
+    worldsOutputEl.style.display = "none";
 
     if (activeView === "compare") {
       compareOutputEl.style.display = "block";
@@ -3503,6 +3888,9 @@
     } else if (activeView === "players") {
       playersOutputEl.style.display = "block";
       renderKnownPlayersView();
+    } else if (activeView === "worlds") {
+      worldsOutputEl.style.display = "block";
+      renderKnownWorldsView();
     } else {
       activeView = "single";
       outputEl.style.display = "block";
@@ -3513,6 +3901,7 @@
     tabSingleBtn.classList.toggle("active", activeView === "single");
     tabCompareBtn.classList.toggle("active", activeView === "compare");
     tabPlayersBtn.classList.toggle("active", activeView === "players");
+    tabWorldsBtn.classList.toggle("active", activeView === "worlds");
   }
 
   dropzone.addEventListener("click", () => fileInput.click());
@@ -3547,14 +3936,20 @@
     renderActiveView();
   });
   tabPlayersBtn.addEventListener("click", () => { activeView = "players"; renderActiveView(); });
+  tabWorldsBtn.addEventListener("click", () => { activeView = "worlds"; renderActiveView(); });
 
+  // "Clear all player files": unloads every character AND deletes their
+  // persisted copies — but deliberately leaves globalPlayerRegistry/
+  // knownWorldAssociations alone. Player identities and world names you've
+  // already learned stay remembered even with nothing currently loaded;
+  // "Clear all stored data" (below) is the only thing that forgets those.
   resetBtn.addEventListener("click", () => {
     if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
     worldsState = null;
     loadedCharacters = [];
     selectedCharacterId = null;
     activeView = "single";
-    globalPlayerRegistry = new Map();
+    clearStoredCharacterFiles();
     outputEl.textContent = "";
     compareOutputEl.textContent = "";
     playersOutputEl.textContent = "";
@@ -3566,6 +3961,16 @@
     // and the find-file help panel's open state, since loadedCharacters is
     // now empty.
     refreshCharacterListUI();
+  });
+
+  // "Clear all stored data": forgets every remembered player identity and
+  // World UID<->Name association (both in memory and in localStorage) —
+  // deliberately does NOT touch currently-loaded characters. Re-renders
+  // whichever tab is open so the change is visible immediately if you're
+  // looking at Known Players or Known World Data right now.
+  clearKnownDataBtn.addEventListener("click", () => {
+    clearKnownData();
+    renderActiveView();
   });
 
   /**
@@ -3671,6 +4076,49 @@
     }
   }
   loadBuildInfo();
+
+  /**
+   * Runs once at page load: re-parses every `.fch` file persisted from a
+   * previous session (see `persistCharacterFile`/`loadStoredCharacterFiles`),
+   * repopulating `loadedCharacters` exactly as if they'd just been dropped
+   * in again — without re-persisting them (they're already stored) or
+   * re-numbering their ids (a restored file keeps the id it was saved
+   * under, and `nextCharacterId` is set past the highest one so anything
+   * uploaded fresh afterward can't collide with it). `globalPlayerRegistry`
+   * and `knownWorldAssociations` were already loaded at module-init time
+   * (see their `let` declarations) — this only has to handle the actual
+   * file bytes, which can't live in a plain JS variable across a reload.
+   * The tab bar is shown immediately regardless of whether there's
+   * anything to restore (see the `refreshCharacterListUI()` call below,
+   * before the async parsing even starts) since Known Players/Known World
+   * Data don't need any file loaded to be useful.
+   */
+  async function restorePersistedState() {
+    refreshCharacterListUI();
+    const stored = loadStoredCharacterFiles();
+    if (!stored.length) return;
+    const failures = [];
+    for (const file of stored) {
+      try {
+        const buffer = base64ToArrayBuffer(file.base64);
+        const result = await parseCharacterFile(buffer);
+        loadedCharacters.push({ id: file.id, fileName: file.fileName, result });
+        if (selectedCharacterId === null) selectedCharacterId = file.id;
+      } catch (e) {
+        failures.push(file.fileName + ": " + e.message);
+        removeStoredCharacterFile(file.id); // won't parse next time either — drop the dead entry
+      }
+    }
+    if (loadedCharacters.length) {
+      nextCharacterId = Math.max(...loadedCharacters.map(c => c.id)) + 1;
+      rebuildGlobalPlayerRegistry();
+      rebuildKnownWorldAssociations();
+    }
+    if (failures.length) surfaceUploadFailures(failures);
+    refreshCharacterListUI();
+    renderActiveView();
+  }
+  restorePersistedState();
 })();
 </script>
 </body>
