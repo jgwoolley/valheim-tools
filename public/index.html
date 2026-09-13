@@ -70,8 +70,8 @@
   #dropzone.drag { border-color: var(--accent); background: var(--panel-alt); color: var(--text); }
   #dropzone strong { color: var(--text); }
   #fileInput { display: none; }
-  #meta { margin: 1rem 0; font-size: 0.85rem; color: var(--muted); font-family: var(--mono); }
-  #errors, #notes { margin: 1rem 0; }
+  .file-meta { margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--muted); font-family: var(--mono); }
+  #errors, #notes, #uploadErrors { margin: 1rem 0; }
   .error {
     background: #241512; border: 1px solid var(--danger); color: #f2beb3;
     padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
@@ -122,8 +122,8 @@
     0% { background: var(--accent); color: #16130f; }
     100% { background: transparent; }
   }
-  .cell-owner.player-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
-  .cell-owner.player-link:hover { text-decoration: underline solid; }
+  .player-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
+  .player-link:hover { text-decoration: underline solid; }
   .cell-steam-id a { color: var(--accent); text-decoration: underline dotted; }
   .cell-steam-id a:hover { text-decoration: underline solid; }
   .level-wrap { display: flex; align-items: center; gap: 0.5rem; }
@@ -169,6 +169,7 @@
   #resetBtn {
     background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
     padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
+    margin-left: auto;
   }
   #resetBtn:hover { border-color: var(--accent); }
   .toprow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -228,6 +229,37 @@
        the (possibly multi-line) path instead of squeezing it alongside. */
     .path-table td.path { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
   }
+
+  /* ---- Multi-character: loaded-file list, view tabs, comparison ---- */
+  #dropzone.compact { padding: 0.9rem 1rem; }
+  #characterList { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+  .char-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+  }
+  .char-row.selected { border-color: var(--accent); }
+  .char-select-btn {
+    flex: 1; text-align: left; background: none; border: none; color: var(--text);
+    font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0;
+  }
+  .char-row.selected .char-select-btn { color: var(--accent); font-weight: 600; }
+  .char-remove-btn {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 5px; width: 1.6rem; height: 1.6rem; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;
+  }
+  .char-remove-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .view-tab {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;
+  }
+  .view-tab:hover:not(:disabled) { border-color: var(--accent); }
+  .view-tab.active { border-color: var(--accent); color: var(--accent); }
+  .view-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+  .compare-table { table-layout: auto; }
+  .compare-table th, .compare-table td { white-space: nowrap; }
+  .cmp-best { color: var(--ok); font-weight: 600; }
+  .cmp-worst { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -237,12 +269,12 @@
 
 <div id="dropzone">
   <div><strong>Click to choose files</strong> or drag & drop them here</div>
-  <div style="margin-top:.4rem; font-size:.8rem;">Expects a Valheim <span class="mono">.fch</span> character file</div>
-  <input type="file" id="fileInput" accept=".fch">
+  <div style="margin-top:.4rem; font-size:.8rem;">Expects one or more Valheim <span class="mono">.fch</span> character files</div>
+  <input type="file" id="fileInput" accept=".fch" multiple>
 </div>
 
-<div id="findFileHelp" style="margin-top: 0.75rem;">
-  <p style="margin: 0 0 0.5rem; font-weight: 600;">Where do I find my character file?</p>
+<details id="findFileHelp" open style="margin-top: 0.75rem;">
+  <summary style="font-weight: 600; cursor: pointer;">Where do I find my character file?</summary>
   <table class="path-table" style="margin-top: 0.6rem;">
     <tbody>
       <tr><td class="platform">Windows (Steam)</td><td class="mono path"><span class="path-text">%AppData%\LocalLow\IronGate\Valheim\characters_local\</span><button type="button" class="copy-path-btn" title="Copy path">Copy</button></td></tr>
@@ -252,16 +284,27 @@
     </tbody>
   </table>
   <p style="color: var(--muted); font-size: 0.78rem; margin: 0.6rem 0 0;">Older saves may use a folder named <span class="mono">characters</span> instead of <span class="mono">characters_local</span> — check both if one doesn't exist. If you're running Valheim on Mac through Whisky/CrossOver instead of the native build, look inside that compatibility layer's emulated <span class="mono">AppData</span> folder using the Windows path above.</p>
+</details>
+
+<div id="characterList" style="display:none;"></div>
+<div id="uploadErrors"></div>
+
+<div id="viewTabs" class="picker-bar" style="display:none;">
+  <label>Tab</label>
+  <button type="button" id="tabSingle" class="view-tab active">Single View</button>
+  <button type="button" id="tabCompare" class="view-tab" disabled>Compare</button>
+  <button type="button" id="tabPlayers" class="view-tab">Known Players</button>
 </div>
 
 <div class="toprow">
-  <div id="meta"></div>
-  <button id="resetBtn" style="display:none;">Clear current file</button>
+  <button id="resetBtn" style="display:none;">Clear all</button>
 </div>
 
 <div id="notes"></div>
 <div id="errors"></div>
 <div id="output"></div>
+<div id="compareOutput" style="display:none;"></div>
+<div id="playersOutput" style="display:none;"></div>
 
 <footer class="credits">
   <p>Valheim's <span class="mono">.fch</span>/<span class="mono">.fwl</span> save format isn't officially documented, and the 1.0 release changed it enough that even community references are out of date. This viewer wouldn't exist without:</p>
@@ -384,6 +427,20 @@
 
 <template id="tpl-table-toc">
   <table><thead><tr><th>Section</th><th>Description</th></tr></thead><tbody></tbody></table>
+</template>
+
+<template id="tpl-character-row">
+  <div class="char-row">
+    <button type="button" class="char-select-btn"></button>
+    <button type="button" class="char-remove-btn" title="Remove this character">✕</button>
+  </div>
+</template>
+
+<template id="tpl-table-compare">
+  <table class="compare-table"><thead><tr class="cmp-header-row"><th class="col-name"></th></tr></thead><tbody></tbody></table>
+</template>
+<template id="tpl-row-compare">
+  <tr><td class="cell-name"></td></tr>
 </template>
 
 <template id="tpl-world-select-bar">
@@ -515,6 +572,65 @@
     11: "Random Event", 12: "Ping", 13: "Event Area", 14: "Hildir1",
     15: "Hildir2", 16: "Hildir3", 17: "Memorial"
   };
+  /** Index of `PlayerStatType.Deaths` (the overall lifetime death count) in `PlayerProfile.PlayerStats.stats` — confirmed against the real `PlayerStatType` enum (see DEATH_CAUSE_STAT_INDEX below). */
+  const DEATHS_TOTAL_STAT_INDEX = 0;
+  /**
+   * Maps each `PlayerStatType.DeathBy*` enum member to its raw stat index
+   * and a short display label — confirmed against the real, current
+   * `PlayerStatType` enum (index = declaration order, 0-based). New causes
+   * get appended to the end of the enum as the game adds content (so old
+   * saves simply have a shorter `stats` array and never reach the newer
+   * indices) rather than inserted in the middle, which is why these low
+   * indices are safe to hardcode across game versions.
+   * @type {[number, string][]}
+   */
+  const DEATH_CAUSE_STATS = [
+    [55, "Undefined"], [56, "Enemy Hit"], [57, "Player Hit (PvP)"], [58, "Fall"],
+    [59, "Drowning"], [60, "Burning"], [61, "Freezing"], [62, "Poisoned"],
+    [63, "Smoke"], [64, "Water"], [65, "Edge of World"], [66, "Impact"],
+    [67, "Cart"], [68, "Tree"], [69, "Self"], [70, "Structural"], [71, "Turret"],
+    [72, "Boat"], [73, "Stalagtite"],
+    [105, "Catapult"], [106, "Cinder Fire"], [107, "Ashlands Ocean"], [108, "Incinerator"],
+    [152, "Tree (Tier 0)"], [153, "Tree (Tier 1)"], [154, "Tree (Tier 2)"],
+    [155, "Tree (Tier 3)"], [156, "Tree (Tier 4)"], [157, "Tree (Tier 5)"],
+    [203, "Draw Bridge"], [204, "Ashlands Lava"]
+  ];
+  /** Every raw stat index {@link DEATH_CAUSE_STATS}/{@link DEATHS_TOTAL_STAT_INDEX} already accounts for — excluded from "Raw Stat Values" so death data isn't shown twice. @type {Set<number>} */
+  const DEATH_STAT_INDICES = new Set([DEATHS_TOTAL_STAT_INDEX, ...DEATH_CAUSE_STATS.map(([i]) => i)]);
+
+  /**
+   * @param {object|undefined} raw - `result.data.playerStats[0]` (the lifetime-totals block), if present.
+   * @returns {{total: number, byCause: Object<string,number>}} Overall death count and a cause-of-death breakdown (only causes with at least one death — see {@link DEATH_CAUSE_STATS}).
+   */
+  function computeDeathStats(raw) {
+    const stats = (raw && raw.stats) || [];
+    const byCause = {};
+    DEATH_CAUSE_STATS.forEach(([i, label]) => {
+      const v = stats[i];
+      if (v) byCause[label] = v;
+    });
+    return { total: stats[DEATHS_TOTAL_STAT_INDEX] || 0, byCause };
+  }
+
+  /**
+   * Builds the "Deaths" card body: the overall lifetime count, plus a
+   * cause-of-death breakdown table when at least one cause is known.
+   * @param {{total: number, byCause: Object<string,number>}} deathStats
+   * @returns {HTMLElement}
+   */
+  function renderDeathStats(deathStats) {
+    const wrap = document.createElement("div");
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    grid.appendChild(tile("Total Deaths", formatCount(deathStats.total)));
+    wrap.appendChild(grid);
+    if (Object.keys(deathStats.byCause).length) {
+      wrap.appendChild(subheading("By Cause"));
+      wrap.appendChild(renderNameValueTable(deathStats.byCause, "Cause", formatCount));
+    }
+    return wrap;
+  }
+
   // ---------- Binary reader (little-endian, .NET BinaryWriter conventions) ----------
 
   /**
@@ -1669,13 +1785,16 @@
    * Builds the Overview card body: name, ID, seed, save version, live-data
    * flag, and the character-profile-level metadata (used-cheats flag,
    * profile creation date, first-spawn flag) confirmed against
-   * `PlayerProfile.cs` — followed by vitals, appearance, and the checksum.
+   * `PlayerProfile.cs` — followed by vitals, appearance, and a "File"
+   * subsection (byte-level size/parse stats plus the checksum, together,
+   * since both are facts about the file itself rather than the character).
    * Vitals/appearance live here (rather than their own section) since both
    * are short and are really just more character-identity fields.
    * @param {object} d - `result.data`.
+   * @param {object} result - The full `parseCharacterFile` result (for `totalBytes`/`bytesConsumed`/`bytesTotal`, which live outside `.data`).
    * @returns {HTMLElement}
    */
-  function renderOverview(d) {
+  function renderOverview(d, result) {
     const wrap = document.createElement("div");
     const ph = d.playerHeader || {};
     const grid = document.createElement("div");
@@ -1694,10 +1813,15 @@
 
     wrap.appendChild(renderVitalsAndAppearance(d.playerData));
 
-    if (d.checksumHex) {
-      wrap.appendChild(subheading("Checksum"));
-      wrap.appendChild(renderChecksum(d.checksumHex, d.checksumValid));
-    }
+    wrap.appendChild(subheading("File"));
+    const fileInfo = document.createElement("p");
+    fileInfo.className = "file-meta";
+    fileInfo.textContent = "File size: " + result.totalBytes.toLocaleString() + " bytes" +
+      (d.dataSize !== undefined ? " · data block: " + d.dataSize.toLocaleString() + " bytes" : "") +
+      (result.bytesConsumed !== undefined ? " · parsed: " + result.bytesConsumed.toLocaleString() + " / " + result.bytesTotal.toLocaleString() + " bytes" : "");
+    wrap.appendChild(fileInfo);
+    if (d.checksumHex) wrap.appendChild(renderChecksum(d.checksumHex, d.checksumValid));
+
     return wrap;
   }
 
@@ -1776,10 +1900,13 @@
   }
 
   /**
-   * Builds the Known Players table from {@link collectKnownPlayers}'s
-   * ID -> {name, steamId} map. Also stashes the resulting list view in
-   * {@link knownPlayersListView} so a "Placed By" click elsewhere can jump
-   * straight to a given player's row.
+   * Builds the Known Players table from a `{name, steamId}` map — today
+   * that's always {@link globalPlayerRegistry} (see
+   * {@link renderKnownPlayersView}), the merged identity knowledge across
+   * every currently-loaded character. Also stashes the resulting list view
+   * in {@link knownPlayersListView} so a "Placed By"/"Crafted By" click
+   * elsewhere can jump straight to a given player's row (see
+   * {@link jumpToKnownPlayer}).
    * @param {Map<string,{name: string, steamId: string|undefined}>} players
    * @returns {HTMLElement}
    */
@@ -1814,6 +1941,33 @@
     );
     knownPlayersListView = list;
     return list;
+  }
+
+  /**
+   * Builds the "Known Players" tab: every player identity known across ALL
+   * currently-loaded characters (see {@link globalPlayerRegistry}) — not
+   * scoped to whichever one character Single View happens to be showing,
+   * since a player's identity is the same real person regardless of which
+   * save mentions them.
+   */
+  function renderKnownPlayersView() {
+    const playersOutputEl = document.getElementById("playersOutput");
+    playersOutputEl.textContent = "";
+    playersOutputEl.appendChild(card("Known Players", globalPlayerRegistry.size, renderKnownPlayers(globalPlayerRegistry),
+      "Every player name, internal ID, and Steam ID found across every currently-loaded character's own identity, inventory item crafters, and map pin owners — shared across files, so loading another character can fill in a name this one save alone couldn't resolve."));
+  }
+
+  /**
+   * Switches to the Known Players tab and scrolls to/highlights one
+   * specific player's row — used by the "Placed By" (map pins) and
+   * "Crafted By" (inventory) links elsewhere, mirroring how
+   * {@link focusMapPoint} lets a table row jump into the map.
+   * @param {string} id - A player ID (key into {@link globalPlayerRegistry} / the Known Players table).
+   */
+  function jumpToKnownPlayer(id) {
+    activeView = "players";
+    renderActiveView();
+    if (knownPlayersListView) knownPlayersListView.jumpTo(([entryId]) => entryId === id);
   }
 
   /**
@@ -1900,8 +2054,18 @@
         row.querySelector(".cell-slot").textContent = "(" + it.gridX + ", " + it.gridY + ")";
         row.querySelector(".cell-equipped").textContent = it.equipped ? "Yes" : "";
         row.querySelector(".cell-quality").textContent = String(it.quality);
-        row.querySelector(".cell-crafter").textContent = it.crafterName || "—";
+        const crafterCell = row.querySelector(".cell-crafter");
+        const globalCrafter = it.crafterID && globalPlayerRegistry.get(it.crafterID);
+        crafterCell.textContent = it.crafterName || (globalCrafter && globalCrafter.name) || "—";
         row.querySelector(".cell-crafter-id").textContent = (it.crafterID && it.crafterID !== "0") ? it.crafterID : "—";
+        if (it.crafterID && it.crafterID !== "0") {
+          crafterCell.classList.add("player-link");
+          crafterCell.title = "Click to jump to this player in Known Players";
+          crafterCell.addEventListener("click", (e) => {
+            e.stopPropagation();
+            jumpToKnownPlayer(it.crafterID);
+          });
+        }
         return row;
       },
       { searchPlaceholder: "Filter inventory…" }
@@ -2056,17 +2220,19 @@
           row.querySelector(".cell-checked").textContent = p.checked ? "Yes" : "";
           // resolvedOwnerName comes from cross-referencing this pin's
           // ownerId against inventory crafterIDs (see resolvePinOwners) —
-          // the game's own ownerName is often just "Steam_<id>".
+          // the game's own ownerName is often just "Steam_<id>". If this
+          // save alone couldn't resolve it, a name learned from a
+          // different loaded character might still be available.
           const ownerCell = row.querySelector(".cell-owner");
-          ownerCell.textContent = p.resolvedOwnerName || p.ownerName || "—";
+          const globalOwner = globalPlayerRegistry.get(p.ownerId);
+          ownerCell.textContent = p.resolvedOwnerName || (globalOwner && globalOwner.name) || p.ownerName || "—";
           row.querySelector(".cell-owner-id").textContent = p.ownerId || "—";
           if (p.ownerId && p.ownerId !== "0") {
             ownerCell.classList.add("player-link");
             ownerCell.title = "Click to jump to this player in Known Players";
             ownerCell.addEventListener("click", (e) => {
               e.stopPropagation();
-              if (jumpToSection) jumpToSection("Known Players");
-              if (knownPlayersListView) knownPlayersListView.jumpTo(([id]) => id === p.ownerId);
+              jumpToKnownPlayer(p.ownerId);
             });
           }
           row.classList.add("jumpable");
@@ -2090,6 +2256,31 @@
   let pointsListView = null;
   /** The "Known Players" {@link buildListView}, so clicking a "Placed By" name can reveal that player's row. @type {(ReturnType<typeof buildListView>)|null} */
   let knownPlayersListView = null;
+
+  // ---------- Multi-character state ----------
+  // Everything below supports loading more than one .fch at once: picking
+  // which one Single View shows, checking 2+ for the Compare tab, and
+  // sharing player-identity knowledge (not stat data — see
+  // rebuildGlobalPlayerRegistry) across all of them.
+
+  /** Every successfully-parsed file loaded this session. @type {{id: number, fileName: string, result: object}[]} */
+  let loadedCharacters = [];
+  /** Which loaded character's `id` Single View currently shows, or `null` if none loaded. @type {number|null} */
+  let selectedCharacterId = null;
+  /** Monotonic counter for character ids — never reused, so duplicate-filename uploads and removals stay unambiguous (array index/filename would not). */
+  let nextCharacterId = 1;
+  /** Which top-level tab is showing. @type {"single"|"compare"|"players"} */
+  let activeView = "single";
+  /**
+   * Best-known {name, steamId} for every player ID seen across ALL loaded
+   * characters (not just the one currently shown) — see
+   * {@link rebuildGlobalPlayerRegistry}. This is a deliberate, narrow
+   * exception to "comparison never merges data between characters": it's
+   * about identifying people (a player ID is the same real person no
+   * matter which save mentions them), not comparing stats.
+   * @type {Map<string,{name: string, steamId: string|undefined}>}
+   */
+  let globalPlayerRegistry = new Map();
 
   /** Cap on the fog-of-war overlay's rendered resolution, regardless of the save's own textureSize (which can be 1000+ px per side) — keeps the generated image small and the downsampling loop below fast. */
   const EXPLORED_OVERLAY_MAX_RES = 512;
@@ -2404,17 +2595,25 @@
     return el;
   }
 
-  /** localStorage key for which single section title the user last selected. Best-effort — every access is wrapped in try/catch. */
+  /** localStorage key for which single section title the user last selected in Single View. Best-effort — every access is wrapped in try/catch. */
   const SECTION_SELECTED_KEY = "valheim-viewer-selected-section";
+  /** Same idea, but for the Compare tab's own independent section selector — kept separate so picking a section in one view never clobbers the other's remembered choice. */
+  const COMPARE_SECTION_SELECTED_KEY = "valheim-viewer-selected-compare-section";
 
-  /** @returns {string|null} The last-selected section title, or null if unavailable/none. */
-  function loadSelectedSection() {
-    try { return localStorage.getItem(SECTION_SELECTED_KEY); } catch (e) { return null; }
+  /**
+   * @param {string} key - {@link SECTION_SELECTED_KEY} or {@link COMPARE_SECTION_SELECTED_KEY}.
+   * @returns {string|null} The last-selected section title for that key, or null if unavailable/none.
+   */
+  function loadSelectedSection(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
   }
 
-  /** @param {string} title */
-  function saveSelectedSection(title) {
-    try { localStorage.setItem(SECTION_SELECTED_KEY, title); } catch (e) { /* private browsing, quota, etc. — fine to skip */ }
+  /**
+   * @param {string} key
+   * @param {string} title
+   */
+  function saveSelectedSection(key, title) {
+    try { localStorage.setItem(key, title); } catch (e) { /* private browsing, quota, etc. — fine to skip */ }
   }
 
   /**
@@ -2435,10 +2634,14 @@
    * this control used checkboxes) was more clutter than it was worth. Prev/
    * Next buttons step through sections in order without opening the
    * dropdown. The chosen section persists across reloads via localStorage.
-   * @param {HTMLElement} container - The `#output` element, already fully populated.
+   * Used for both Single View (`#output`) and the Compare tab
+   * (`#compareOutput`) — each with its own `storageKey` so switching tabs
+   * never clobbers the other's remembered section.
+   * @param {HTMLElement} container - The already fully-populated container to build a picker for.
+   * @param {string} storageKey - {@link SECTION_SELECTED_KEY} or {@link COMPARE_SECTION_SELECTED_KEY}.
    * @returns {HTMLElement}
    */
-  function buildSectionSelector(container) {
+  function buildSectionSelector(container, storageKey) {
     const sections = Array.from(container.children).filter(el => el.dataset && el.dataset.sectionTitle);
     const picker = clone("tpl-section-selector");
     const select = picker.querySelector("select");
@@ -2467,11 +2670,11 @@
     const selectSection = (title) => {
       select.value = title;
       showOnly(title);
-      saveSelectedSection(title);
+      saveSelectedSection(storageKey, title);
     };
     jumpToSection = selectSection;
 
-    const saved = loadSelectedSection();
+    const saved = loadSelectedSection(storageKey);
     const initial = sections.some(el => el.dataset.sectionTitle === saved) ? saved : (sections[0] && sections[0].dataset.sectionTitle);
     if (initial) selectSection(initial);
 
@@ -2578,11 +2781,14 @@
   }
 
   /**
-   * Collects every player found anywhere in the save — the character's own
-   * identity, every inventory item's crafter, and every map pin's owner —
-   * into one consolidated "Known Players" list, keyed by Valheim's internal
-   * per-profile player ID (not the same number as a Steam64 ID — see
-   * below).
+   * Collects every player *this save itself* mentions — the character's
+   * own identity, every inventory item's crafter, and every map pin's
+   * owner — keyed by Valheim's internal per-profile player ID (not the
+   * same number as a Steam64 ID — see below). Deliberately does NOT
+   * consult {@link globalPlayerRegistry} — only {@link rebuildGlobalPlayerRegistry}
+   * should read this function directly; every other consumer reads the
+   * already-merged `globalPlayerRegistry` instead (see its own doc comment
+   * for why reading it back into itself here would be a bug).
    *
    * The real Steam64 ID is recovered separately: the game's own
    * `"Steam_<id>"` fallback name embeds it directly, but only shows up for
@@ -2594,9 +2800,9 @@
    * in the process, as an earlier version of this did), every name variant
    * seen for an ID is scanned to capture both pieces independently.
    * @param {object} d - `result.data`.
-   * @returns {Map<string,{name: string, steamId: string|undefined}>} Player ID -> best-known display name and Steam64 ID (if ever seen).
+   * @returns {Map<string,{name: string|undefined, steamId: string|undefined}>} Player ID -> this save's own best-known name/Steam64 ID.
    */
-  function collectKnownPlayers(d) {
+  function collectKnownPlayersRaw(d) {
     const players = new Map();
     const consider = (id, name) => {
       if (!id || id === "0" || !name) return;
@@ -2619,29 +2825,62 @@
         consider(p.ownerId, p.ownerName);
       });
     });
-    // Fill in a display name for IDs where only the raw Steam fallback was
-    // ever seen (no real display name turned up anywhere in the save).
-    players.forEach(entry => { if (!entry.name && entry.steamId) entry.name = "Steam_" + entry.steamId; });
     return players;
   }
 
   /**
-   * Renders a full parse `result` into the page: the meta line, notes,
-   * errors, and one card per section of data that was available.
+   * Rebuilds {@link globalPlayerRegistry} by merging {@link collectKnownPlayersRaw}'s
+   * output across every currently-loaded character — the RAW collector is
+   * essential here, not something that itself reads `globalPlayerRegistry`:
+   * folding already-enriched data back into the registry would let a name
+   * learned from a since-removed character persist forever (it'd keep
+   * "enriching" the very registry it originally came from, each rebuild
+   * re-deriving it from itself instead of from what's actually still
+   * loaded). Called whenever `loadedCharacters` changes (a file is added or
+   * removed) — a removal can reduce global knowledge too, correctly: e.g.
+   * removing the one file that had a player's real name means everyone
+   * else falls back to their own raw `Steam_<id>` again. Must run before
+   * the next render so the pin-owner fallback in `renderWorldCard`, the
+   * inventory-crafter fallback in `renderInventory`, and the "Known
+   * Players" tab (see `renderKnownPlayersView`) all see up-to-date data —
+   * all three now read this registry directly rather than through a
+   * per-file wrapper, since Known Players moved from a per-character
+   * Single View section to its own cross-character top-level tab.
+   */
+  function rebuildGlobalPlayerRegistry() {
+    const merged = new Map();
+    loadedCharacters.forEach(({ result }) => {
+      collectKnownPlayersRaw(result.data).forEach((entry, id) => {
+        const existing = merged.get(id);
+        if (!existing) { merged.set(id, { name: entry.name, steamId: entry.steamId }); return; }
+        if (!existing.name && entry.name) existing.name = entry.name;
+        if (!existing.steamId && entry.steamId) existing.steamId = entry.steamId;
+      });
+    });
+    // Every entry gets a usable display name, even when no loaded file ever
+    // recorded a real one — falls back to the raw Steam_<id> the game
+    // itself would show, so every consumer of this registry (the pin-owner
+    // and inventory-crafter fallbacks, the Known Players tab) can just read
+    // `.name` without re-implementing this fallback themselves.
+    merged.forEach(entry => { if (!entry.name && entry.steamId) entry.name = "Steam_" + entry.steamId; });
+    globalPlayerRegistry = merged;
+  }
+
+  /**
+   * Renders a full parse `result` into the page: notes, errors, and one
+   * card per section of data that was available. File-level size/parse
+   * stats live inside the Overview card's "File" subsection now (see
+   * renderOverview) rather than a persistent line above the section
+   * picker, so they scope to whichever character Single View is showing.
    * @param {Awaited<ReturnType<typeof parseCharacterFile>>} result
    */
   function render(result) {
     const out = document.getElementById("output");
     const errBox = document.getElementById("errors");
     const noteBox = document.getElementById("notes");
-    const meta = document.getElementById("meta");
     out.textContent = "";
     errBox.textContent = "";
     noteBox.textContent = "";
-
-    meta.textContent = "File size: " + result.totalBytes.toLocaleString() + " bytes" +
-      (result.data.dataSize !== undefined ? " · data block: " + result.data.dataSize.toLocaleString() + " bytes" : "") +
-      (result.bytesConsumed !== undefined ? " · parsed: " + result.bytesConsumed.toLocaleString() + " / " + result.bytesTotal.toLocaleString() + " bytes" : "");
 
     result.notes.forEach(n => {
       const el = clone("tpl-note");
@@ -2660,16 +2899,16 @@
     const worldNames = withSelfKnownWorldName(d);
     const worldPlaytimes = computeWorldPlaytimes(d, worldNames);
 
-    // Overview, Skills, and Known Players are appended directly (not into a
-    // fragment) so World Details can be inserted right after them, ahead of
-    // everything else — see the hasWorlds block below.
-    out.appendChild(card("Overview", undefined, renderOverview(d),
-      "Character name, class/level, vitals, appearance, file checksum, and other top-level summary fields."));
+    // Overview and Skills are appended directly (not into a fragment) so
+    // World Details can be inserted right after them, ahead of everything
+    // else — see the hasWorlds block below. Known Players moved out of
+    // Single View entirely — it's now its own top-level tab (see
+    // renderKnownPlayersView) since it's a cross-character, global list,
+    // not something scoped to whichever one character Single View shows.
+    out.appendChild(card("Overview", undefined, renderOverview(d, result),
+      "[Lifetime, all worlds] Character name, class/level, vitals, appearance, file size/parse stats, and checksum."));
     if (pd && pd.skills) out.appendChild(card("Skills", pd.skills.length, renderSkills(pd.skills),
-      "Skill levels, internal skill IDs, and XP accumulators."));
-    const knownPlayers = collectKnownPlayers(d);
-    if (knownPlayers.size) out.appendChild(card("Known Players", knownPlayers.size, renderKnownPlayers(knownPlayers),
-      "Every player name and Steam ID found anywhere in this save — this character's own identity, inventory item crafters, and map pin owners."));
+      "[Lifetime, all worlds] Skill levels, internal skill IDs, and XP accumulators."));
 
     const globalFrag = document.createDocumentFragment();
 
@@ -2691,14 +2930,19 @@
       const kills = raw.enemyStats && raw.enemyStats[0];
       if (kills && Object.keys(kills).length) {
         globalFrag.appendChild(card("Enemy Kills", Object.keys(kills).length, renderNameValueTable(kills, "Enemy", formatCount),
-          "Lifetime kill counts per enemy type."));
+          "[Lifetime, all worlds] Kill counts per enemy type."));
+      }
+      const deathStats = computeDeathStats(raw);
+      if (deathStats.total > 0) {
+        globalFrag.appendChild(card("Deaths", undefined, renderDeathStats(deathStats),
+          "[Lifetime, all worlds] Total death count and a breakdown by cause of death."));
       }
       [
-        ["Items Picked Up", raw.itemPickupStats, "Item", "Lifetime pickup counts per item type."],
-        ["Items Crafted", raw.itemCraftStats, "Item", "Lifetime craft counts per item type."],
-        ["Resources Foraged", raw.pickableStats, "Resource", "Lifetime counts of foraged/gathered resource nodes."],
-        ["Foods Eaten", raw.foodEatenStats, "Food", "Lifetime counts of foods eaten."],
-        ["Building Pieces Placed", raw.piecesPlacedStats, "Piece", "Lifetime counts of building pieces placed."]
+        ["Items Picked Up", raw.itemPickupStats, "Item", "[Lifetime, all worlds] Pickup counts per item type."],
+        ["Items Crafted", raw.itemCraftStats, "Item", "[Lifetime, all worlds] Craft counts per item type."],
+        ["Resources Foraged", raw.pickableStats, "Resource", "[Lifetime, all worlds] Counts of foraged/gathered resource nodes."],
+        ["Foods Eaten", raw.foodEatenStats, "Food", "[Lifetime, all worlds] Counts of foods eaten."],
+        ["Building Pieces Placed", raw.piecesPlacedStats, "Piece", "[Lifetime, all worlds] Counts of building pieces placed."]
       ].forEach(([title, map, label, description]) => {
         if (map && Object.keys(map).length) {
           globalFrag.appendChild(card(title, Object.keys(map).length, renderNameValueTable(map, label, formatCount), description));
@@ -2712,13 +2956,13 @@
         // was true at each save), not a meaningful duration to show per
         // flag, so this is a plain list rather than a name/value table.
         globalFrag.appendChild(card("World & Story Flags", Object.keys(raw.knownWorldKeys).length, renderStringList(Object.keys(raw.knownWorldKeys), "flags"),
-          "Global events, bosses defeated, and other one-off world/story flags this character has triggered."));
+          "[Lifetime, all worlds] Global events, bosses defeated, and other one-off world/story flags this character has triggered — despite the name, these are recorded per character, not per world."));
       }
       if (Object.keys(raw.knownCommands || {}).length) {
         globalFrag.appendChild(card("Console Commands", Object.keys(raw.knownCommands).length, renderNameValueTable(raw.knownCommands, "Command", formatCount),
-          "Console/cheat commands this character has used, with how many times each was used."));
+          "[Lifetime, all worlds] Console/cheat commands this character has used, with how many times each was used."));
       }
-      const nonZeroRaw = raw.stats.map((v, i) => [i, v]).filter(([, v]) => v !== 0);
+      const nonZeroRaw = raw.stats.map((v, i) => [i, v]).filter(([i, v]) => v !== 0 && !DEATH_STAT_INDICES.has(i));
       if (nonZeroRaw.length) {
         const rawStatsList = buildListView(
           nonZeroRaw,
@@ -2733,39 +2977,39 @@
           { searchPlaceholder: "Filter stat #…" }
         );
         globalFrag.appendChild(card("Raw Stat Values", nonZeroRaw.length, rawStatsList,
-          "Undecoded lifetime stat slots, shown by raw index for completeness — not all of these have a known meaning."));
+          "[Lifetime, all worlds] Undecoded stat slots, shown by raw index for completeness — not all of these have a known meaning (death-related indices are excluded here; see the Deaths section)."));
       }
     }
 
     if (pd) {
       if (pd.inventory) globalFrag.appendChild(card("Inventory", pd.inventory.items.length, renderInventory(pd.inventory),
-        "Items currently carried, worn, or equipped, with quantity, durability, quality, and crafter info."));
+        "[Lifetime, all worlds] Items currently carried, worn, or equipped, with quantity, durability, quality, and crafter info."));
       if (pd.knownRecipes) globalFrag.appendChild(card("Known Recipes", pd.knownRecipes.length, renderStringList(pd.knownRecipes, "recipes"),
-        "Crafting recipes this character has unlocked."));
+        "[Lifetime, all worlds] Crafting recipes this character has unlocked."));
       if (pd.knownStations) globalFrag.appendChild(card("Known Crafting Stations", pd.knownStations.length, renderStations(pd.knownStations),
-        "Crafting stations this character has discovered, with the station level required to use them."));
+        "[Lifetime, all worlds] Crafting stations this character has discovered, with the station level required to use them."));
       if (pd.knownMaterials) globalFrag.appendChild(card("Discovered Materials", pd.knownMaterials.length, renderStringList(pd.knownMaterials, "materials"),
-        "Crafting materials this character has identified/discovered."));
+        "[Lifetime, all worlds] Crafting materials this character has identified/discovered."));
       if (pd.knownBiomes) globalFrag.appendChild(card("Known Biomes", pd.knownBiomes.length, renderStringList(pd.knownBiomes, "biomes"),
-        "Biomes this character has explored."));
+        "[Lifetime, all worlds] Biomes this character has explored."));
       if (pd.uniques) globalFrag.appendChild(card("Discovered Uniques", pd.uniques.length, renderStringList(pd.uniques, "uniques"),
-        "Unique bosses, items, or locations this character has discovered."));
+        "[Lifetime, all worlds] Unique bosses, items, or locations this character has discovered."));
       if (pd.trophies) globalFrag.appendChild(card("Trophies", pd.trophies.length, renderStringList(pd.trophies, "trophies"),
-        "Trophies this character has collected from defeated enemies."));
+        "[Lifetime, all worlds] Trophies this character has collected from defeated enemies."));
       if (pd.shownTutorials) globalFrag.appendChild(card("Tutorials Seen", pd.shownTutorials.length, renderStringList(pd.shownTutorials, "tutorials"),
-        "In-game tutorial popups this character has already been shown."));
+        "[Lifetime, all worlds] In-game tutorial popups this character has already been shown."));
       if (Object.keys(pd.knownTexts || {}).length) globalFrag.appendChild(card("Known Texts", Object.keys(pd.knownTexts).length, renderTextMap(pd.knownTexts),
-        "Runestones, signs, and other in-game texts this character has read."));
+        "[Lifetime, all worlds] Runestones, signs, and other in-game texts this character has read."));
       if (pd.foods && pd.foods.length) globalFrag.appendChild(card("Active Food", pd.foods.length, renderFoods(pd.foods),
-        "Foods currently providing active buffs, with their remaining duration and stat bonuses."));
+        "[Lifetime, all worlds] Foods currently providing active buffs, with their remaining duration and stat bonuses."));
       if (pd.decodeError) {
         globalFrag.appendChild(card("Undecoded inventory/appearance data", pd.leftoverBytes ? pd.leftoverBytes.length : undefined,
           renderLeftover({ leftoverStrings: result.data.playerDataLeftoverStrings, leftoverHex: result.data.playerDataLeftoverHex }),
-          "Leftover bytes after inventory/appearance parsing that couldn't be matched to a known field."));
+          "[Lifetime, all worlds] Leftover bytes after inventory/appearance parsing that couldn't be matched to a known field."));
       }
     }
 
-    // World-specific panel: inserted right after Known Players (rather than
+    // World-specific panel: inserted right after Skills (rather than
     // into a detached fragment first) because showWorld() initializes a
     // Cytoscape canvas, which needs its container already laid out in the
     // visible DOM to pick up a non-zero size. The world <select> lives
@@ -2775,7 +3019,7 @@
       const panel = document.createElement("div");
       panel.id = "worldPanel";
       panel.dataset.sectionTitle = "World Details";
-      panel.dataset.sectionDescription = "Per-world spawn/logout/death/home points, map pins, and an interactive pin map with your explored territory shown as fog-of-war. Use the World selector below to switch worlds.";
+      panel.dataset.sectionDescription = "[Per world] Spawn/logout/death/home points, map pins, and an interactive pin map with your explored territory shown as fog-of-war. Use the World selector below to switch worlds.";
       const desc = document.createElement("p");
       desc.className = "section-desc";
       desc.textContent = panel.dataset.sectionDescription;
@@ -2802,7 +3046,7 @@
     if (raw && Object.keys(raw.knownWorlds || {}).length) {
       out.appendChild(card("Playtime by World Name", Object.keys(raw.knownWorlds).length,
         renderNameValueTable(raw.knownWorlds, "World", formatSeconds),
-        "Total time spent in each world this character has played, by world name — from the character's own play-time record. " +
+        "[Lifetime, broken down per world] Total time spent in each world this character has played, by world name — from the character's own play-time record. " +
         "Character files never store which name belongs to which numeric world ID (that link lives only in each world's own .fwl file), " +
         "so with more than one world here, these can't be reliably matched to a specific \"World N\" card in World Details above."));
     }
@@ -2828,7 +3072,214 @@
     // Section picker goes last so it can enumerate whatever actually got
     // rendered above (Table of Contents included), but visually first so
     // it's usable without scrolling.
-    out.insertBefore(buildSectionSelector(out), out.firstChild);
+    out.insertBefore(buildSectionSelector(out, SECTION_SELECTED_KEY), out.firstChild);
+  }
+
+  // ---------- Compare view ----------
+  // Renders 2+ loaded characters side by side. Deliberately does NOT
+  // cross-reference their *stat* data (each character's numbers come only
+  // from that one character's own result) — only independent per-
+  // character totals placed in the same table for comparison.
+
+  /**
+   * @param {object} result - One character's `parseCharacterFile` result.
+   * @returns {{totalPlaytimeSeconds: number, totalEnemyKills: number, totalItemsCrafted: number, totalItemsPickedUp: number, biomesDiscovered: number, recipesKnown: number, trophies: number, worldsPlayed: number}}
+   */
+  function computeCharacterAggregates(result) {
+    const d = result.data;
+    const pd = d.playerData;
+    const raw = d.playerStats && d.playerStats[0];
+    const sum = (obj) => Object.values(obj || {}).reduce((a, b) => a + b, 0);
+    return {
+      totalPlaytimeSeconds: sum(raw && raw.knownWorlds),
+      totalEnemyKills: sum(raw && raw.enemyStats && raw.enemyStats[0]),
+      totalItemsCrafted: sum(raw && raw.itemCraftStats),
+      totalItemsPickedUp: sum(raw && raw.itemPickupStats),
+      totalDeaths: (raw && raw.stats && raw.stats[DEATHS_TOTAL_STAT_INDEX]) || 0,
+      biomesDiscovered: ((pd && pd.knownBiomes) || []).length,
+      recipesKnown: ((pd && pd.knownRecipes) || []).length,
+      trophies: ((pd && pd.trophies) || []).length,
+      worldsPlayed: Object.keys((raw && raw.knownWorlds) || {}).length
+    };
+  }
+
+  /**
+   * Builds the leaderboard: one row per aggregate metric, one column per
+   * character, the "best" value in each row highlighted — the highest
+   * value normally, but the LOWEST for metrics where less is better (just
+   * "Total Deaths" today, via `invert: true`) so dying less doesn't get
+   * flagged the same as dying more.
+   * @param {{id: number, result: object}[]} characters
+   * @param {Map<number,string>} labels - character id -> display label, from {@link characterLabelsById}.
+   * @returns {HTMLElement}
+   */
+  function renderComparisonLeaderboard(characters, labels) {
+    const aggregates = characters.map(c => computeCharacterAggregates(c.result));
+    const rows = [
+      { name: "Total Playtime", values: aggregates.map(a => a.totalPlaytimeSeconds), format: formatSeconds },
+      { name: "Total Enemy Kills", values: aggregates.map(a => a.totalEnemyKills), format: formatCount },
+      { name: "Total Deaths", values: aggregates.map(a => a.totalDeaths), format: formatCount, invert: true },
+      { name: "Total Items Crafted", values: aggregates.map(a => a.totalItemsCrafted), format: formatCount },
+      { name: "Total Items Picked Up", values: aggregates.map(a => a.totalItemsPickedUp), format: formatCount },
+      { name: "Biomes Discovered", values: aggregates.map(a => a.biomesDiscovered), format: String },
+      { name: "Recipes Known", values: aggregates.map(a => a.recipesKnown), format: String },
+      { name: "Trophies", values: aggregates.map(a => a.trophies), format: String },
+      { name: "Worlds Played", values: aggregates.map(a => a.worldsPlayed), format: String }
+    ];
+
+    const table = clone("tpl-table-compare");
+    table.querySelector(".col-name").textContent = "Metric";
+    const headerRow = table.querySelector(".cmp-header-row");
+    characters.forEach(c => {
+      const th = document.createElement("th");
+      th.textContent = labels.get(c.id);
+      headerRow.appendChild(th);
+    });
+    const tbody = table.querySelector("tbody");
+    rows.forEach(({ name, values, format, invert }) => {
+      const row = clone("tpl-row-compare");
+      row.querySelector(".cell-name").textContent = name;
+      const best = invert ? Math.min(...values) : Math.max(...values);
+      const worst = invert ? Math.max(...values) : Math.min(...values);
+      const allTied = values.every(v => v === values[0]);
+      values.forEach(v => {
+        const td = document.createElement("td");
+        td.textContent = format(v);
+        // A tied row (including an all-zero one, where nobody's done this
+        // yet) has no meaningful best or worst — leave every cell neutral.
+        if (!allTied) {
+          if (v === best) td.classList.add("cmp-best");
+          else if (v === worst) td.classList.add("cmp-worst");
+        }
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    return table;
+  }
+
+  /**
+   * Generic per-category comparison table: builds one row per distinct
+   * name across the union of every character's `name -> number` map
+   * (`opts.extractMap`), one column per character, sorted so whichever row
+   * has the single highest value on ANY character comes first — surfaces
+   * "who dominates this category" rather than "what's the biggest combined
+   * total". Reuses {@link buildListView} for the same search + pagination
+   * every other list in this viewer already has.
+   * @param {{id: number, result: object}[]} characters
+   * @param {Map<number,string>} labels
+   * @param {{title: string, description: string, nameLabel: string, extractMap: (result: object) => (Object<string,number>|undefined), formatValue?: (v: number) => string, zeroText?: string, invertBest?: boolean}} opts - `invertBest` highlights the LOWEST value per row instead of the highest (for "less is better" categories, e.g. Deaths).
+   * @returns {HTMLElement}
+   */
+  function renderComparisonCategory(characters, labels, opts) {
+    const formatValue = opts.formatValue || formatCount;
+    const maps = characters.map(c => opts.extractMap(c.result) || {});
+    const names = new Set();
+    maps.forEach(m => Object.keys(m).forEach(n => names.add(n)));
+
+    const rows = Array.from(names, name => ({ name, values: maps.map(m => m[name] || 0) }))
+      .sort((a, b) => Math.max(...b.values) - Math.max(...a.values));
+
+    if (!rows.length) return card(opts.title, 0, empty("None recorded."), opts.description);
+
+    const list = buildListView(
+      rows,
+      r => r.name,
+      () => {
+        const table = clone("tpl-table-compare");
+        table.querySelector(".col-name").textContent = opts.nameLabel;
+        const headerRow = table.querySelector(".cmp-header-row");
+        characters.forEach(c => {
+          const th = document.createElement("th");
+          th.textContent = labels.get(c.id);
+          headerRow.appendChild(th);
+        });
+        return { root: table, appendTo: table.querySelector("tbody") };
+      },
+      (r) => {
+        const row = clone("tpl-row-compare");
+        row.querySelector(".cell-name").textContent = r.name;
+        const best = opts.invertBest ? Math.min(...r.values) : Math.max(...r.values);
+        const allTied = r.values.every(v => v === r.values[0]);
+        r.values.forEach(v => {
+          const td = document.createElement("td");
+          td.textContent = (v === 0 && opts.zeroText !== undefined) ? opts.zeroText : formatValue(v);
+          if (!allTied && v === best && (opts.invertBest || best > 0)) td.classList.add("cmp-best");
+          row.appendChild(td);
+        });
+        return row;
+      },
+      { searchPlaceholder: "Filter " + opts.nameLabel.toLowerCase() + "…" }
+    );
+
+    return card(opts.title, rows.length, list, opts.description);
+  }
+
+  /**
+   * Renders the Compare tab into `#compareOutput` for every currently-
+   * loaded character (2+ — the tab is disabled below that): a leaderboard
+   * of aggregate totals, then a detailed side-by-side table per stat
+   * category. Deliberately doesn't use {@link buildSectionSelector}/a
+   * Table of Contents like Single View does — at most ~9 short sections
+   * here, meant to be scanned together rather than viewed one at a time.
+   * @param {{id: number, fileName: string, result: object}[]} characters - Always all of `loadedCharacters`.
+   */
+  function renderComparison(characters) {
+    const compareOutputEl = document.getElementById("compareOutput");
+    compareOutputEl.textContent = "";
+    const labels = characterLabelsById(characters);
+
+    const heading = document.createElement("p");
+    heading.className = "subtitle";
+    heading.style.margin = "0 0 1rem";
+    heading.textContent = "Comparing " + characters.length + " characters: " + characters.map(c => labels.get(c.id)).join(", ");
+    compareOutputEl.appendChild(heading);
+
+    compareOutputEl.appendChild(card("Leaderboard", undefined, renderComparisonLeaderboard(characters, labels),
+      "[Lifetime, all worlds] Aggregate totals across each character's entire play history, summed across every world they've played (except \"Worlds Played\", which counts distinct worlds). Lower is highlighted as \"best\" for Total Deaths only."));
+
+    const categories = [
+      { title: "Enemy Kills", nameLabel: "Enemy", description: "[Lifetime, all worlds] Kill counts per enemy type.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.enemyStats && r.enemyStats[0]; } },
+      { title: "Deaths", nameLabel: "Cause", description: "[Lifetime, all worlds] Breakdown by cause of death — the lowest count per row is highlighted, since fewer deaths is the better outcome here.",
+        invertBest: true,
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return computeDeathStats(r).byCause; } },
+      { title: "Items Picked Up", nameLabel: "Item", description: "[Lifetime, all worlds] Pickup counts per item type.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.itemPickupStats; } },
+      { title: "Items Crafted", nameLabel: "Item", description: "[Lifetime, all worlds] Craft counts per item type.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.itemCraftStats; } },
+      { title: "Resources Foraged", nameLabel: "Resource", description: "[Lifetime, all worlds] Counts of foraged/gathered resource nodes.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.pickableStats; } },
+      { title: "Foods Eaten", nameLabel: "Food", description: "[Lifetime, all worlds] Counts of foods eaten.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.foodEatenStats; } },
+      { title: "Building Pieces Placed", nameLabel: "Piece", description: "[Lifetime, all worlds] Counts of building pieces placed.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.piecesPlacedStats; } },
+      { title: "Skills", nameLabel: "Skill", description: "[Lifetime, all worlds] Skill levels compared side by side.", formatValue: String,
+        extractMap: (result) => {
+          const skills = result.data.playerData && result.data.playerData.skills;
+          if (!skills) return {};
+          const map = {};
+          skills.forEach(s => { map[SKILL_NAMES[s.type] || ("Skill " + s.type)] = s.level; });
+          return map;
+        } },
+      { title: "Playtime by World Name", nameLabel: "World", formatValue: formatSeconds, zeroText: "—",
+        description: "[Lifetime, broken down per world] Total time spent in each world each character has played, by world name — shared world names line up in the same row; a — means that character never played that world.",
+        extractMap: (result) => { const r = result.data.playerStats && result.data.playerStats[0]; return r && r.knownWorlds; } }
+    ];
+    categories.forEach(opts => { compareOutputEl.appendChild(renderComparisonCategory(characters, labels, opts)); });
+
+    // Same Table of Contents + section-picker pattern as Single View (see
+    // the tail of render()) — built last so it can enumerate the sections
+    // above, inserted right after the fixed "Comparing N characters..."
+    // heading so that heading always stays visible regardless of which
+    // section is currently picked.
+    const tocEntries = Array.from(compareOutputEl.children)
+      .filter(el => el.dataset && el.dataset.sectionTitle)
+      .map(el => ({ title: el.dataset.sectionTitle, description: el.dataset.sectionDescription || "" }));
+    const tocCard = card("Table of Contents", tocEntries.length, renderTableOfContents(tocEntries),
+      "Every comparison section, with a one-line description of what it contains. Search or click a row to jump straight to it.");
+    compareOutputEl.insertBefore(tocCard, heading.nextSibling);
+    compareOutputEl.insertBefore(buildSectionSelector(compareOutputEl, COMPARE_SECTION_SELECTED_KEY), heading.nextSibling);
   }
 
   // ---------- Wiring ----------
@@ -2836,6 +3287,15 @@
   const fileInput = document.getElementById("fileInput");
   const resetBtn = document.getElementById("resetBtn");
   const findFileHelp = document.getElementById("findFileHelp");
+  const characterListEl = document.getElementById("characterList");
+  const uploadErrorsEl = document.getElementById("uploadErrors");
+  const viewTabs = document.getElementById("viewTabs");
+  const tabSingleBtn = document.getElementById("tabSingle");
+  const tabCompareBtn = document.getElementById("tabCompare");
+  const tabPlayersBtn = document.getElementById("tabPlayers");
+  const outputEl = document.getElementById("output");
+  const compareOutputEl = document.getElementById("compareOutput");
+  const playersOutputEl = document.getElementById("playersOutput");
 
   /**
    * @param {File} file
@@ -2851,7 +3311,8 @@
   }
 
   /**
-   * Shows a single top-level error and clears any prior render.
+   * Shows a single top-level error and clears any prior render. Only used
+   * when there's nothing else on screen to preserve — see `handleFiles`.
    * @param {string} message
    */
   function showFatalError(message) {
@@ -2859,12 +3320,64 @@
     el.textContent = message;
     document.getElementById("errors").replaceChildren(el);
     document.getElementById("notes").textContent = "";
-    document.getElementById("output").textContent = "";
+    outputEl.textContent = "";
   }
 
   /**
-   * Handles a drop/selection of one or more files: exactly one `.fch`
-   * character file is required; any others are ignored (with a note).
+   * Appends "file failed to parse" messages to `#uploadErrors` — kept
+   * entirely separate from `#errors`, which `render()` clears and
+   * repopulates every time it runs for whichever character Single View
+   * shows. Reusing `#errors` here would mean the very `render()` call that
+   * follows a successful upload in the same batch immediately wipes out
+   * the failure message for the one that didn't parse.
+   * @param {string[]} failures - Already-formatted "filename: message" strings.
+   */
+  function surfaceUploadFailures(failures) {
+    failures.forEach(msg => {
+      const el = clone("tpl-error");
+      el.textContent = msg;
+      uploadErrorsEl.appendChild(el);
+    });
+  }
+
+  /**
+   * @param {{result: object, fileName: string}} entry
+   * @returns {string} The character's in-game name, or a filename-based fallback if it has none.
+   */
+  function characterLabel(entry) {
+    const name = ((entry.result.data.playerHeader && entry.result.data.playerHeader.name) || "").trim();
+    return name || "(unnamed) — " + entry.fileName;
+  }
+
+  /**
+   * Disambiguates {@link characterLabel} across a set of loaded characters
+   * — two different characters can share an in-game name (or both be
+   * unnamed) — by appending the filename to any label that repeats.
+   * Computed fresh each call rather than stored, so it stays correct as
+   * characters are added/removed.
+   * @param {{id: number, result: object, fileName: string}[]} chars
+   * @returns {Map<number,string>} character id -> display label
+   */
+  function characterLabelsById(chars) {
+    const base = chars.map(characterLabel);
+    const counts = {};
+    base.forEach(n => { counts[n] = (counts[n] || 0) + 1; });
+    const labels = new Map();
+    chars.forEach((c, i) => {
+      let label = base[i];
+      if (counts[label] > 1) label += " (" + c.fileName + ")";
+      labels.set(c.id, label);
+    });
+    return labels;
+  }
+
+  /**
+   * Handles a drop/selection of one or more files: every `.fch` file in
+   * the batch is parsed and added as a new loaded character — never
+   * deduped, even against an already-loaded filename (two uploads of the
+   * same file become two distinct, individually-removable entries; see
+   * {@link characterLabelsById} for how they stay visually distinguishable).
+   * Non-`.fch` files are silently ignored.
    * @param {FileList|File[]} fileList
    */
   async function handleFiles(fileList) {
@@ -2872,27 +3385,134 @@
     const fchFiles = files.filter(f => /\.fch$/i.test(f.name));
 
     if (!fchFiles.length) {
-      showFatalError("Please include a Valheim \".fch\" character file.");
+      // Only fatal if there's nothing already on screen to preserve —
+      // a stray non-.fch file dropped alongside/after existing characters
+      // shouldn't disrupt them.
+      if (!loadedCharacters.length) showFatalError("Please include a Valheim \".fch\" character file.");
       return;
     }
 
-    let result;
-    try {
-      const fchBuffer = await readAsArrayBuffer(fchFiles[0]);
-      result = await parseCharacterFile(fchBuffer);
-    } catch (e) {
-      showFatalError("Failed to parse file: " + e.message);
-      return;
+    const failures = [];
+    for (const file of fchFiles) {
+      try {
+        const buffer = await readAsArrayBuffer(file);
+        const result = await parseCharacterFile(buffer);
+        const entry = { id: nextCharacterId++, fileName: file.name, result };
+        loadedCharacters.push(entry);
+        if (selectedCharacterId === null) selectedCharacterId = entry.id;
+      } catch (e) {
+        failures.push(file.name + ": " + e.message);
+      }
     }
 
-    if (fchFiles.length > 1) {
-      result.notes.push("Multiple .fch files were dropped — showing \"" + fchFiles[0].name + "\" and ignoring the rest.");
+    rebuildGlobalPlayerRegistry();
+    if (failures.length) surfaceUploadFailures(failures);
+    refreshCharacterListUI();
+    renderActiveView();
+    fileInput.value = ""; // allow re-selecting the same file(s) again later
+  }
+
+  /**
+   * Rebuilds `#characterList` from `loadedCharacters` and toggles every
+   * bit of UI whose state depends on how many characters are loaded: the
+   * character rows themselves, the view-tab bar, the Compare tab's
+   * disabled state (needs 2+ loaded — Compare always covers everyone
+   * loaded, there's no separate per-character selection anymore), "Clear
+   * all"'s visibility, the dropzone's compact styling, and the find-file
+   * help panel's default-open state.
+   */
+  function refreshCharacterListUI() {
+    characterListEl.textContent = "";
+    const labels = characterLabelsById(loadedCharacters);
+    loadedCharacters.forEach(entry => {
+      const row = clone("tpl-character-row");
+      const selectBtn = row.querySelector(".char-select-btn");
+      const removeBtn = row.querySelector(".char-remove-btn");
+      selectBtn.dataset.id = String(entry.id);
+      selectBtn.textContent = labels.get(entry.id);
+      removeBtn.dataset.id = String(entry.id);
+      if (entry.id === selectedCharacterId) row.classList.add("selected");
+      characterListEl.appendChild(row);
+    });
+
+    const hasAny = loadedCharacters.length > 0;
+    characterListEl.style.display = hasAny ? "flex" : "none";
+    viewTabs.style.display = hasAny ? "flex" : "none";
+    // Compare always covers every loaded character — no more per-character
+    // checkbox to include/exclude one; if you don't want someone in the
+    // comparison, remove them (✕) entirely.
+    tabCompareBtn.disabled = loadedCharacters.length < 2;
+    resetBtn.style.display = hasAny ? "inline-block" : "none";
+    dropzone.classList.toggle("compact", hasAny);
+    findFileHelp.open = !hasAny;
+  }
+
+  /**
+   * Removes one loaded character — the only way to exclude someone from
+   * Compare too, now that Compare always covers every loaded character.
+   * If it was the one shown in Single View, falls back to a neighboring
+   * character (or clears everything if none remain) and tears down the
+   * live pin map — but only in that case; removing a character that isn't
+   * currently on screen must not touch `pinMapInstance`/`worldsState` at
+   * all, since those belong to whichever character `render()` was last
+   * called for.
+   * @param {number} id
+   */
+  function removeCharacter(id) {
+    const idx = loadedCharacters.findIndex(c => c.id === id);
+    if (idx === -1) return;
+    loadedCharacters.splice(idx, 1);
+
+    if (selectedCharacterId === id) {
+      if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
+      worldsState = null;
+      selectedCharacterId = loadedCharacters.length ? loadedCharacters[Math.max(0, idx - 1)].id : null;
     }
 
-    render(result);
-    dropzone.style.display = "none";
-    findFileHelp.style.display = "none";
-    resetBtn.style.display = "inline-block";
+    rebuildGlobalPlayerRegistry();
+
+    if (!loadedCharacters.length) {
+      activeView = "single";
+      outputEl.textContent = "";
+      compareOutputEl.textContent = "";
+      playersOutputEl.textContent = "";
+      document.getElementById("errors").textContent = "";
+      document.getElementById("notes").textContent = "";
+      uploadErrorsEl.textContent = "";
+    }
+
+    refreshCharacterListUI();
+    renderActiveView();
+  }
+
+  /**
+   * Shows whichever of Single View / Compare / Known Players `activeView`
+   * currently is. Compare always covers every loaded character; falls
+   * back to Single View if fewer than 2 remain (e.g. right after removing
+   * one while Compare was open).
+   */
+  function renderActiveView() {
+    if (activeView === "compare" && loadedCharacters.length < 2) activeView = "single"; // e.g. right after removing a character dropped the count below 2 while Compare was open
+    outputEl.style.display = "none";
+    compareOutputEl.style.display = "none";
+    playersOutputEl.style.display = "none";
+
+    if (activeView === "compare") {
+      compareOutputEl.style.display = "block";
+      renderComparison(loadedCharacters);
+    } else if (activeView === "players") {
+      playersOutputEl.style.display = "block";
+      renderKnownPlayersView();
+    } else {
+      activeView = "single";
+      outputEl.style.display = "block";
+      const current = loadedCharacters.find(c => c.id === selectedCharacterId);
+      if (current) render(current.result);
+      else outputEl.textContent = "";
+    }
+    tabSingleBtn.classList.toggle("active", activeView === "single");
+    tabCompareBtn.classList.toggle("active", activeView === "compare");
+    tabPlayersBtn.classList.toggle("active", activeView === "players");
   }
 
   dropzone.addEventListener("click", () => fileInput.click());
@@ -2906,17 +3526,46 @@
     if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   });
 
+  characterListEl.addEventListener("click", e => {
+    const removeBtn = e.target.closest(".char-remove-btn");
+    if (removeBtn) { removeCharacter(Number(removeBtn.dataset.id)); return; }
+    const selectBtn = e.target.closest(".char-select-btn");
+    if (selectBtn) {
+      selectedCharacterId = Number(selectBtn.dataset.id);
+      refreshCharacterListUI();
+      // Only Single View's own selection changed — leave an already-open
+      // Compare tab exactly as it was (it already covers every loaded
+      // character regardless of which one Single View points at).
+      if (activeView !== "compare") renderActiveView();
+    }
+  });
+
+  tabSingleBtn.addEventListener("click", () => { activeView = "single"; renderActiveView(); });
+  tabCompareBtn.addEventListener("click", () => {
+    if (tabCompareBtn.disabled) return;
+    activeView = "compare";
+    renderActiveView();
+  });
+  tabPlayersBtn.addEventListener("click", () => { activeView = "players"; renderActiveView(); });
+
   resetBtn.addEventListener("click", () => {
-    dropzone.style.display = "block";
-    findFileHelp.style.display = "block";
-    resetBtn.style.display = "none";
     if (pinMapInstance) { pinMapInstance.destroy(); pinMapInstance = null; }
     worldsState = null;
-    document.getElementById("output").textContent = "";
+    loadedCharacters = [];
+    selectedCharacterId = null;
+    activeView = "single";
+    globalPlayerRegistry = new Map();
+    outputEl.textContent = "";
+    compareOutputEl.textContent = "";
+    playersOutputEl.textContent = "";
     document.getElementById("errors").textContent = "";
     document.getElementById("notes").textContent = "";
-    document.getElementById("meta").textContent = "";
+    uploadErrorsEl.textContent = "";
     fileInput.value = "";
+    // Hides the character list/tabs and restores the dropzone's full size
+    // and the find-file help panel's open state, since loadedCharacters is
+    // now empty.
+    refreshCharacterListUI();
   });
 
   /**
