@@ -2683,9 +2683,11 @@
     // shown.
     const raw = d.playerStats && d.playerStats[0];
     if (raw) {
-      // World playtime (raw.knownWorlds: world name -> seconds) is surfaced
-      // as a "Playtime" row on each matching world in World Details instead
-      // of a standalone section — see computeWorldPlaytimes().
+      // World playtime (raw.knownWorlds: world name -> seconds) is rendered
+      // further down as its own "Playtime by World Name" section, right
+      // after World Details — see the `if (raw && ...)` block below the
+      // `if (hasWorlds)` one, and computeWorldPlaytimes() for how a single
+      // unambiguous world also gets a matching "Playtime" row there.
       const kills = raw.enemyStats && raw.enemyStats[0];
       if (kills && Object.keys(kills).length) {
         globalFrag.appendChild(card("Enemy Kills", Object.keys(kills).length, renderNameValueTable(kills, "Enemy", formatCount),
@@ -2785,6 +2787,24 @@
       out.appendChild(panel);
       worldsState = { worlds: d.worlds, worldNames, worldPlaytimes };
       showWorld(0);
+    }
+
+    // Placed right after World Details rather than as a per-world row
+    // there: a world's own PlayerStats.knownWorlds entry only tells you a
+    // *name* and its playtime, never which numeric world UID that name
+    // belongs to. With exactly one world that link is unambiguous (see
+    // withSelfKnownWorldName — computeWorldPlaytimes fills in a "Playtime"
+    // row on that one World Details card), but the character file gives no
+    // way to resolve it for two or more; only that world's own .fwl file
+    // has that mapping, which this viewer doesn't read. So rather than
+    // guessing or silently dropping the data, every known name/playtime
+    // pair is listed here standalone.
+    if (raw && Object.keys(raw.knownWorlds || {}).length) {
+      out.appendChild(card("Playtime by World Name", Object.keys(raw.knownWorlds).length,
+        renderNameValueTable(raw.knownWorlds, "World", formatSeconds),
+        "Total time spent in each world this character has played, by world name — from the character's own play-time record. " +
+        "Character files never store which name belongs to which numeric world ID (that link lives only in each world's own .fwl file), " +
+        "so with more than one world here, these can't be reliably matched to a specific \"World N\" card in World Details above."));
     }
 
     out.appendChild(globalFrag);
