@@ -204,6 +204,30 @@
   .credits li { margin-bottom: 0.3rem; }
   .build-info { margin-top: 0.75rem; color: var(--muted); font-size: 0.72rem; }
   .build-info a { color: var(--accent); }
+  .path-table td.platform { white-space: nowrap; font-weight: 600; }
+  .path-table td.path { display: flex; align-items: center; gap: 0.6rem; }
+  .path-table .path-text { word-break: break-all; flex: 1; min-width: 0; } /* long, punctuation-sparse paths need this to wrap instead of overflowing */
+  .copy-path-btn {
+    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 0.2rem 0.55rem; border-radius: 5px; font-size: 0.72rem; font-family: inherit;
+    cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  }
+  .copy-path-btn:hover { border-color: var(--accent); }
+  .copy-path-btn.copied { border-color: var(--ok); color: var(--ok); }
+  @media (max-width: 640px) {
+    /* A fixed two-column layout squeezes these long paths into an
+       unreadably narrow column on a phone — stack each row into label-then-
+       path blocks instead. */
+    .path-table, .path-table tbody, .path-table tr, .path-table td { display: block; width: 100%; }
+    .path-table td { border-bottom: none; padding: 0; }
+    .path-table tr { margin-bottom: 0.75rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); }
+    .path-table tr:last-child { margin-bottom: 0; border-bottom: none; }
+    .path-table td.platform { white-space: normal; margin-bottom: 0.2rem; }
+    /* Overrides the generic block rule above (wins on specificity): keep
+       the path and its copy button together, but stack the button below
+       the (possibly multi-line) path instead of squeezing it alongside. */
+    .path-table td.path { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+  }
 </style>
 </head>
 <body>
@@ -219,12 +243,12 @@
 
 <div id="findFileHelp" style="margin-top: 0.75rem;">
   <p style="margin: 0 0 0.5rem; font-weight: 600;">Where do I find my character file?</p>
-  <table style="margin-top: 0.6rem;">
+  <table class="path-table" style="margin-top: 0.6rem;">
     <tbody>
-      <tr><td style="white-space:nowrap;">Windows (Steam)</td><td class="mono">%AppData%\LocalLow\IronGate\Valheim\characters_local\</td></tr>
-      <tr><td style="white-space:nowrap;">macOS (native Steam/App Store build)</td><td class="mono">~/Library/Application Support/IronGate/Valheim/characters_local/</td></tr>
-      <tr><td style="white-space:nowrap;">Linux (native)</td><td class="mono">~/.config/unity3d/IronGate/Valheim/characters_local/</td></tr>
-      <tr><td style="white-space:nowrap;">Steam Deck / Linux (Proton)</td><td class="mono">~/.local/share/Steam/steamapps/compatdata/892970/pfx/drive_c/users/steamuser/AppData/LocalLow/IronGate/Valheim/characters_local/</td></tr>
+      <tr><td class="platform">Windows (Steam)</td><td class="mono path"><span class="path-text">%AppData%\LocalLow\IronGate\Valheim\characters_local\</span><button type="button" class="copy-path-btn" title="Copy path">Copy</button></td></tr>
+      <tr><td class="platform">macOS (native Steam/App Store build)</td><td class="mono path"><span class="path-text">~/Library/Application Support/IronGate/Valheim/characters_local/</span><button type="button" class="copy-path-btn" title="Copy path">Copy</button></td></tr>
+      <tr><td class="platform">Linux (native)</td><td class="mono path"><span class="path-text">~/.config/unity3d/IronGate/Valheim/characters_local/</span><button type="button" class="copy-path-btn" title="Copy path">Copy</button></td></tr>
+      <tr><td class="platform">Steam Deck / Linux (Proton)</td><td class="mono path"><span class="path-text">~/.local/share/Steam/steamapps/compatdata/892970/pfx/drive_c/users/steamuser/AppData/LocalLow/IronGate/Valheim/characters_local/</span><button type="button" class="copy-path-btn" title="Copy path">Copy</button></td></tr>
     </tbody>
   </table>
   <p style="color: var(--muted); font-size: 0.78rem; margin: 0.6rem 0 0;">Older saves may use a folder named <span class="mono">characters</span> instead of <span class="mono">characters_local</span> — check both if one doesn't exist. If you're running Valheim on Mac through Whisky/CrossOver instead of the native build, look inside that compatibility layer's emulated <span class="mono">AppData</span> folder using the Windows path above.</p>
@@ -2873,6 +2897,45 @@
     document.getElementById("notes").textContent = "";
     document.getElementById("meta").textContent = "";
     fileInput.value = "";
+  });
+
+  /**
+   * Copies text to the clipboard, trying the modern (async, permission-
+   * gated) Clipboard API first and falling back to the old
+   * `execCommand("copy")` trick — the fallback matters here because
+   * `navigator.clipboard` can be unavailable on a plain `file://` origin
+   * (how this tool is often opened) in some browsers.
+   * @param {string} text
+   * @returns {Promise<boolean>} Whether the copy actually succeeded.
+   */
+  async function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) { /* fall through to the legacy path below */ }
+    }
+    const scratch = document.createElement("textarea");
+    scratch.value = text;
+    scratch.style.position = "fixed";
+    scratch.style.opacity = "0";
+    document.body.appendChild(scratch);
+    scratch.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(scratch);
+    return ok;
+  }
+
+  document.querySelectorAll(".copy-path-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const path = btn.previousElementSibling.textContent;
+      const ok = await copyToClipboard(path);
+      const original = btn.textContent;
+      btn.textContent = ok ? "Copied!" : "Couldn't copy";
+      btn.classList.toggle("copied", ok);
+      setTimeout(() => { btn.textContent = original; btn.classList.remove("copied"); }, 1500);
+    });
   });
 
   // PWA: registers the service worker (sw.js) for installability and
