@@ -132,6 +132,49 @@
   .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(255,255,255,.2); }
   .empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
   details > summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+  .wiki-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .wiki-filters input, .wiki-filters select, .wiki-pager select, .wiki-pager button {
+    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; font: inherit; font-size: 0.85rem; padding: 0.4rem 0.7rem;
+  }
+  .wiki-filters input { flex: 1 1 14rem; min-width: 0; }
+  .wiki-filters select { flex: 0 1 auto; max-width: 100%; cursor: pointer; }
+  .wiki-filters input:focus, .wiki-filters select:focus, .wiki-pager select:focus { outline: none; border-color: var(--accent); }
+  .wiki-filters input::placeholder { color: var(--muted); }
+  .wiki-table { overflow-x: auto; }
+  .wiki-table th.sortable { cursor: pointer; user-select: none; }
+  .wiki-table th.sortable:hover { color: var(--accent); }
+  .wiki-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted); }
+  .wiki-pager .page-info { padding: 0 0.5rem; }
+  .wiki-pager button { cursor: pointer; }
+  .wiki-pager button:hover:not(:disabled), .wiki-pager select:hover { border-color: var(--accent); }
+  .wiki-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .wiki-pager select { cursor: pointer; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+  .menu-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem 1.4rem; }
+  .menu-card h2 { margin: 0 0 0.5rem; font-size: 1.15rem; }
+  .menu-card p { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+  .menu-primary { border-color: var(--accent); }
+  .menu-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .menu-links a, .menu-links a:visited { background: var(--panel-alt); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.4rem 0.9rem; text-decoration: none; font-size: 0.9rem; }
+  .menu-links a:hover { border-color: var(--accent); color: var(--accent); }
+  #pinBadge { color: var(--accent); }
+  .pin-btn { background: none; border: none; color: var(--accent); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.25rem; }
+  .pinned-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+  .pinned-controls button, .pinned-table input, .pinned-table select, .pinned-table button {
+    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; font: inherit; font-size: 0.85rem; padding: 0.25rem 0.6rem; cursor: pointer;
+  }
+  .pinned-table input { width: 4.5rem; cursor: text; }
+  .pinned-controls .share-link { flex: 1 1 16rem; min-width: 0; width: auto; cursor: text; background: var(--panel-alt); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; padding: 0.25rem 0.6rem; }
+  .pinned-controls button:hover, .pinned-table button:hover { border-color: var(--accent); }
+  .pinned-section + .pinned-section { margin-top: 1rem; }
+  .wiki-chip { margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+  .wiki-chip button { margin-left: 0.4rem; background: var(--panel-alt); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; padding: 0.2rem 0.6rem; cursor: pointer; }
+  .wiki-chip button:hover { border-color: var(--accent); }
+  .wiki-link, .wiki-link:visited { color: var(--accent); text-decoration: underline dotted; }
+  .wiki-link:hover { text-decoration: underline solid; }
+  .per-level { color: var(--muted); font-size: 0.75rem; }
   .strings-scroll { max-height: 320px; overflow-y: auto; margin-top: 0.5rem; }
   .hexdump {
     font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
@@ -228,10 +271,20 @@
     background: var(--accent); color: #16130f; font-size: 0.65rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .04em; vertical-align: middle; white-space: nowrap;
   }
-  .site-header { display: flex; align-items: center; gap: 1.5rem; padding-bottom: 0.75rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  .site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; padding-bottom: 0.75rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
   .site-header .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; }
   .site-header .brand .app-icon { width: 1.6rem; height: 1.6rem; }
   .site-header .nav-info { margin-left: auto; }
+  .site-nav { display: flex; gap: 1rem; }
+  .site-nav a, .site-nav a:visited { color: var(--muted); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; }
+  .site-nav a:hover { color: var(--text); }
+  .site-nav .nav-dropdown-toggle { color: var(--muted); padding-bottom: 2px; border-bottom: 2px solid transparent; text-decoration: none; }
+  .site-nav .nav-dropdown-toggle:hover { color: var(--text); text-decoration: none; }
+  .site-nav .nav-dropdown-toggle.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .site-nav .nav-dropdown-panel a { border-bottom: none; color: var(--text); }
+  .site-nav .nav-dropdown-panel a.active { color: var(--accent); }
+  .site-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  [data-page-content][hidden] { display: none; }
   .nav-dropdown { position: relative; }
   .nav-dropdown-toggle { font: inherit; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
   .nav-dropdown-toggle:hover, .nav-dropdown-toggle[aria-expanded="true"] { text-decoration: underline; }
@@ -298,7 +351,23 @@
 <body>
 
 <header class="site-header">
-  <a class="brand" href="./"><img src="icon.svg" alt="" class="app-icon">Nf3t's Valhiem Tools</a>
+  <a class="brand" href="#/"><img src="icon.svg" alt="" class="app-icon">Nf3t's Valhiem Tools</a>
+  <nav class="site-nav" aria-label="Pages">
+    <div class="nav-dropdown">
+      <button type="button" class="nav-dropdown-toggle" id="gameDataToggle" aria-haspopup="true" aria-expanded="false">Game Info ▾</button>
+      <div class="nav-dropdown-panel" hidden>
+        <a href="#/recipes" data-page="recipes">Recipes</a>
+        <a href="#/items" data-page="items">Items</a>
+        <a href="#/armor" data-page="armor">Armor</a>
+        <a href="#/trinkets" data-page="trinkets">Trinkets</a>
+        <a href="#/food" data-page="food">Food &amp; drink</a>
+        <a href="#/buildings" data-page="buildings">Buildings</a>
+        <a href="#/creatures" data-page="creatures">Creatures</a>
+      </div>
+    </div>
+    <a href="#/pinned" data-page="pinned">Materials list<span id="pinBadge"></span></a>
+    <a href="#/saves" data-page="saves">Save File Parser</a>
+  </nav>
   <div class="nav-dropdown nav-info">
     <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">More</button>
     <div class="nav-dropdown-panel nav-dropdown-panel-right" hidden>
@@ -308,6 +377,37 @@
     </div>
   </div>
 </header>
+<div id="page-home" data-page-content="home" hidden>
+  <p class="subtitle">Tools and reference data for Valheim.</p>
+  <div class="menu-grid">
+    <section class="menu-card menu-primary">
+      <h2>Game Info</h2>
+      <p>Look up every recipe, item, armor set, trinket, food, building and creature, all extracted from the game's own files. Pin recipes to get one combined list of the raw materials you need.</p>
+      <div class="menu-links">
+        <a href="#/recipes">Recipes</a>
+        <a href="#/items">Items</a>
+        <a href="#/armor">Armor</a>
+        <a href="#/trinkets">Trinkets</a>
+        <a href="#/food">Food &amp; drink</a>
+        <a href="#/buildings">Buildings</a>
+        <a href="#/creatures">Creatures</a>
+        <a href="#/pinned">Materials list</a>
+      </div>
+    </section>
+    <section class="menu-card">
+      <h2>Save File Parser</h2>
+      <p>Drop a <span class="mono">.fch</span> character file to inspect its inventory, skills, stats and map pins. Parsing happens entirely in your browser; nothing is uploaded.</p>
+      <div class="menu-links"><a href="#/saves">Open the parser</a></div>
+    </section>
+  </div>
+</div>
+
+<div id="page-pinned" data-page-content="pinned" hidden>
+  <p class="subtitle">Pin recipes and buildings, then see everything you need to gather here.</p>
+  <div id="pinnedOutput"></div>
+</div>
+
+<div id="page-saves" data-page-content="saves" hidden>
 <p class="subtitle">Drop a <span class="mono">.fch</span> character save file to inspect its contents. Parsing happens entirely in your browser.</p>
 
 <div id="dropzone">
@@ -352,6 +452,7 @@
 <div id="playersOutput" style="display:none;"></div>
 <div id="worldsOutput" style="display:none;"></div>
 
+
 <footer class="credits">
   <p>Valheim's <span class="mono">.fch</span>/<span class="mono">.fwl</span> save format isn't officially documented, and the 1.0 release changed it enough that even community references are out of date. This viewer wouldn't exist without:</p>
   <ul>
@@ -362,6 +463,12 @@
   </ul>
   <p>See <span class="mono">README.md</span> in this project for how the format gaps were actually tracked down, and <span class="mono">REVERSE_ENGINEERING_FROM_SOURCE.md</span> for what it'd take to confirm the rest against Valheim's own C# source.</p>
 </footer>
+</div>
+
+<div id="page-wiki" data-page-content="wiki" hidden>
+  <p class="subtitle" id="wikiSubtitle"></p>
+  <div id="wikiOutput"></div>
+</div>
 
 <footer id="buildInfo" class="build-info"></footer>
 
@@ -410,11 +517,13 @@
 </template>
 
 <template id="tpl-table-inventory">
-  <table><thead><tr><th>Item</th><th>Qty</th><th>Durability</th><th>Slot</th><th>Equipped</th><th>Quality</th><th>Crafted By</th><th>Crafter ID</th></tr></thead><tbody></tbody></table>
+  <table><thead><tr><th>Item</th><th>Type</th><th>Weight</th><th>Qty</th><th>Durability</th><th>Slot</th><th>Equipped</th><th>Quality</th><th>Crafted By</th><th>Crafter ID</th></tr></thead><tbody></tbody></table>
 </template>
 <template id="tpl-row-inventory">
   <tr>
     <td class="cell-name"></td>
+    <td class="cell-type"></td>
+    <td class="cell-weight"></td>
     <td class="cell-count"></td>
     <td class="cell-durability"></td>
     <td class="cell-slot"></td>
@@ -612,6 +721,7 @@
   const setOpen = (d, open) => { d.panel.hidden = !open; d.toggle.setAttribute("aria-expanded", String(open)); };
   const closeAll = () => dropdowns.forEach((d) => setOpen(d, false));
   for (const d of dropdowns) d.toggle.addEventListener("click", () => { const o = d.panel.hidden; closeAll(); setOpen(d, o); });
+  for (const d of dropdowns) d.panel.addEventListener("click", (e) => { if (e.target.closest("a[href^='#']")) closeAll(); }); // in-page links navigate, so close behind them
   document.addEventListener("click", (e) => { if (!dropdowns.some((d) => d.toggle.contains(e.target) || d.panel.contains(e.target))) closeAll(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
 })();
@@ -1249,6 +1359,101 @@
     return stripped.split("_").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join("");
   }
 
+  // ---- Game data (names + item stats), generated by extract/extract-data.sh ----
+  // Loaded in the background; the save viewer works without it (names just stay raw), and
+  // re-resolves and re-renders once it arrives.
+  /** @type {{tokens: Object<string,string>, prefabs: Object<string,string>, prefabsLower: Map<string,string>, idByHash: Map<number,string>, items: Map<string,object>}|null} */
+  let gameData = null;
+
+  async function loadGameData() {
+    try {
+      const [names, items] = await Promise.all(["names", "items"].map(f => fetch("data/" + f + ".json").then(r => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })));
+      gameData = {
+        tokens: names.tokens,
+        prefabs: names.prefabs,
+        prefabsLower: new Map(Object.entries(names.prefabs).map(([id, name]) => [id.toLowerCase(), name])),
+        idsLower: new Map(Object.keys(names.prefabs).map(id => [id.toLowerCase(), id])),
+        pages: names.pages,
+        tokenIds: names.tokenIds,
+        idByHash: new Map(Object.keys(names.prefabs).map(id => [getStableHashCode(id), id])),
+        items: new Map(items.items.map(i => [i.id, i])),
+      };
+    } catch (err) {
+      return; // e.g. opened from file://, or the data hasn't been generated: keep raw names
+    }
+    if (!loadedCharacters.length) return;
+    if (currentPage() !== "saves") { saveViewStale = true; return; } // re-render when the parser is next shown (its map needs a visible container)
+    loadedCharacters.forEach(c => resolveItemNames(c.result));
+    renderActiveView();
+  }
+
+  /** "defeated_eikthyr" / "Pickable_Mushroom" -> "Defeated Eikthyr" / "Mushroom". */
+  function humanize(raw) {
+    if (!/^[A-Za-z0-9]+(_[A-Za-z0-9]+)+/.test(raw)) return raw;
+    return raw.replace(/^Pickable_/, "").split(/[_ ]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  }
+
+  /**
+   * The English display name for anything the save stores by internal name: a localization
+   * token ("$item_wood"), a prefab id ("SwordIron", "TrophyBoar", "Boar"), or a snake_case flag.
+   * Unknown names come back unchanged, so this is safe to apply anywhere.
+   * @param {string} raw
+   * @returns {string}
+   */
+  function friendlyName(raw) {
+    if (typeof raw !== "string" || !raw) return raw;
+    if (gameData) {
+      const bare = raw.replace(/^\$/, "");
+      const token = gameData.tokens[bare] || gameData.tokens[bare.toLowerCase()];
+      if (token) return token;
+      const prefab = gameData.prefabsLower.get(bare.toLowerCase());
+      if (prefab) return prefab;
+    }
+    return humanize(raw);
+  }
+
+  /**
+   * Which wiki entry a save-file name refers to, e.g. "$item_wood" or "TrophyBoar" ->
+   * {page: "items", id: "Wood"}; null when it isn't an item, building or creature.
+   * @param {string} raw
+   * @returns {{page: string, id: string}|null}
+   */
+  function wikiTarget(raw) {
+    if (!gameData || typeof raw !== "string" || !raw) return null;
+    const bare = raw.replace(/^\$/, "");
+    const id = gameData.tokenIds[bare] || gameData.tokenIds[bare.toLowerCase()] || gameData.idsLower.get(bare.toLowerCase());
+    return id ? { page: gameData.pages[id], id } : null;
+  }
+
+  /**
+   * Fills a table cell with a save-file name's English text, linked to its wiki entry when it has one
+   * (the raw name stays available as a tooltip).
+   * @param {HTMLElement} cell
+   * @param {string} raw - Internal name as stored in the save.
+   * @param {string} [text] - Overrides the displayed text (defaults to {@link friendlyName}).
+   */
+  function setNameCell(cell, raw, text = friendlyName(raw)) {
+    const target = wikiTarget(raw);
+    cell.textContent = "";
+    if (target) cell.appendChild(wikiLink(text, target.page, { id: target.id }));
+    else cell.textContent = text;
+    if (text !== raw) cell.title = raw;
+  }
+
+  /** The game-data record (type, weight, ...) for an inventory item, when its prefab is known. */
+  function inventoryItemInfo(it) {
+    return gameData && (gameData.items.get(it.prefabId) || gameData.items.get(it.resolvedName)) || null;
+  }
+
+  function inventoryItemName(it) {
+    const info = inventoryItemInfo(it);
+    if (info) return info.name;
+    return it.resolvedName ? friendlyName(it.resolvedName) : "Item #" + it.prefabHash;
+  }
+
   /**
    * Item entries only carry a stable hash of their prefab name (see
    * {@link getStableHashCode}), not the name itself — but plenty of *other*
@@ -1292,6 +1497,8 @@
 
     pd.inventory.items.forEach(it => {
       if (it.prefabHash && hashToName.has(it.prefabHash)) it.resolvedName = hashToName.get(it.prefabHash);
+      // The full item database covers everything, including items other players crafted or dropped.
+      if (gameData && it.prefabHash && gameData.idByHash.has(it.prefabHash)) it.prefabId = gameData.idByHash.get(it.prefabHash);
     });
   }
 
@@ -1843,9 +2050,13 @@
     if (!list || !list.length) return empty("None recorded.");
     return buildListView(
       list,
-      s => s,
+      s => s + " " + friendlyName(s),
       makeStringTableContainer,
-      s => { const row = clone("tpl-row-stringlist"); row.querySelector("td").textContent = s; return row; },
+      s => {
+        const row = clone("tpl-row-stringlist");
+        setNameCell(row.querySelector("td"), s);
+        return row;
+      },
       { searchPlaceholder: "Filter " + (itemLabel || "items") + "…" }
     );
   }
@@ -1951,16 +2162,17 @@
    * @param {(v: number) => string} formatValue
    * @returns {HTMLElement}
    */
-  function renderNameValueTable(map, nameLabel, formatValue) {
+  function renderNameValueTable(map, nameLabel, formatValue, translate) {
     const entries = Object.entries(map || {}).sort((a, b) => b[1] - a[1]);
     if (!entries.length) return empty("None recorded.");
     return buildListView(
       entries,
-      ([k]) => k,
+      ([k]) => translate ? k + " " + friendlyName(k) : k,
       () => { const table = clone("tpl-table-namevalue"); table.querySelector(".col-name").textContent = nameLabel; return { root: table, appendTo: table.querySelector("tbody") }; },
       ([k, v]) => {
         const row = clone("tpl-row-namevalue");
-        row.querySelector(".cell-name").textContent = k;
+        if (translate) setNameCell(row.querySelector(".cell-name"), k);
+        else row.querySelector(".cell-name").textContent = k;
         row.querySelector(".cell-value").textContent = formatValue(v);
         return row;
       },
@@ -2257,11 +2469,16 @@
     if (!inv || !inv.items.length) return empty("No inventory items found.");
     return buildListView(
       inv.items,
-      it => (it.resolvedName || "Item #" + it.prefabHash) + " " + (it.crafterName || "") + " " + (it.crafterID || ""),
+      it => inventoryItemName(it) + " " + (it.prefabId || it.resolvedName || "") + " " + (it.crafterName || "") + " " + (it.crafterID || ""),
       () => { const table = clone("tpl-table-inventory"); return { root: table, appendTo: table.querySelector("tbody") }; },
       it => {
         const row = clone("tpl-row-inventory");
-        row.querySelector(".cell-name").textContent = it.resolvedName || ("Item #" + it.prefabHash);
+        const info = inventoryItemInfo(it);
+        const rawName = it.prefabId || it.resolvedName;
+        if (rawName) setNameCell(row.querySelector(".cell-name"), rawName, inventoryItemName(it));
+        else row.querySelector(".cell-name").textContent = inventoryItemName(it);
+        row.querySelector(".cell-type").textContent = info ? info.type.replace(/([a-z])([A-Z])/g, "$1 $2") : "—";
+        row.querySelector(".cell-weight").textContent = info ? fmtFloat(info.weight * it.stack, 1) : "—";
         row.querySelector(".cell-count").textContent = String(it.stack);
         row.querySelector(".cell-durability").textContent = it.durability !== undefined ? fmtFloat(it.durability, 0) : "—";
         row.querySelector(".cell-slot").textContent = "(" + it.gridX + ", " + it.gridY + ")";
@@ -2294,11 +2511,11 @@
     if (!list || !list.length) return empty("None recorded.");
     return buildListView(
       list,
-      s => s.name,
+      s => s.name + " " + friendlyName(s.name),
       () => { const table = clone("tpl-table-stations"); return { root: table, appendTo: table.querySelector("tbody") }; },
       s => {
         const row = clone("tpl-row-station");
-        row.querySelector(".cell-name").textContent = s.name;
+        setNameCell(row.querySelector(".cell-name"), s.name);
         row.querySelector(".cell-level").textContent = String(s.level);
         return row;
       },
@@ -2337,11 +2554,11 @@
     if (!foods || !foods.length) return empty("None recorded.");
     return buildListView(
       foods,
-      f => f.name,
+      f => f.name + " " + friendlyName(f.name),
       () => { const table = clone("tpl-table-food"); return { root: table, appendTo: table.querySelector("tbody") }; },
       f => {
         const row = clone("tpl-row-food");
-        row.querySelector(".cell-name").textContent = f.name;
+        setNameCell(row.querySelector(".cell-name"), f.name);
         row.querySelector(".cell-time").textContent = formatSeconds(f.time);
         return row;
       },
@@ -3329,7 +3546,7 @@
       // unambiguous world also gets a matching "Playtime" row there.
       const kills = raw.enemyStats && raw.enemyStats[0];
       if (kills && Object.keys(kills).length) {
-        globalFrag.appendChild(card("Enemy Kills", Object.keys(kills).length, renderNameValueTable(kills, "Enemy", formatCount),
+        globalFrag.appendChild(card("Enemy Kills", Object.keys(kills).length, renderNameValueTable(kills, "Enemy", formatCount, true),
           "[Lifetime, all worlds] Kill counts per enemy type."));
       }
       const deathStats = computeDeathStats(raw);
@@ -3345,7 +3562,7 @@
         ["Building Pieces Placed", raw.piecesPlacedStats, "Piece", "[Lifetime, all worlds] Counts of building pieces placed."]
       ].forEach(([title, map, label, description]) => {
         if (map && Object.keys(map).length) {
-          globalFrag.appendChild(card(title, Object.keys(map).length, renderNameValueTable(map, label, formatCount), description));
+          globalFrag.appendChild(card(title, Object.keys(map).length, renderNameValueTable(map, label, formatCount, true), description));
         }
       });
       if (Object.keys(raw.knownWorldKeys || {}).length) {
@@ -3952,6 +4169,880 @@
     tabPlayersBtn.classList.toggle("active", activeView === "players");
     tabWorldsBtn.classList.toggle("active", activeView === "worlds");
   }
+
+  // ---- Wiki pages (recipes, items, buildings, creatures) ----
+  // Each page is a table over one JSON file in data/, generated from the game's own files by
+  // extract/extract-data.sh. A page definition says which rows to show, how to search them,
+  // which dropdown filters to offer, and how to render/sort each column.
+
+  /** "OneHandedWeapon" -> "One Handed Weapon", "slash" -> "Slash". */
+  function prettify(text) {
+    return text.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, c => c.toUpperCase());
+  }
+
+  /** "Slash 55 (+6/lvl), Pierce 10" from {slash: 55} and an optional per-level map. */
+  function describeAmounts(amounts, perLevel) {
+    return Object.entries(amounts || {}).map(([k, v]) => {
+      const extra = perLevel && perLevel[k] ? " (+" + perLevel[k] + "/lvl)" : "";
+      return prettify(k) + " " + v + extra;
+    }).join(", ");
+  }
+
+  /** A link to a wiki page, optionally pre-filtered: wikiLink("Wood", "items", {id: "Wood"}) -> #/items?id=Wood. */
+  function wikiLink(text, page, params) {
+    const a = document.createElement("a");
+    a.className = "wiki-link";
+    a.href = "#/" + page + "?" + new URLSearchParams(params);
+    a.textContent = text;
+    return a;
+  }
+
+  /** Ids of items that have a crafting recipe; filled in before item-based pages render (see needsRecipes). */
+  let craftableItemIds = new Set();
+  const INGREDIENT_TYPES = new Set(["Material", "Trophy", "Misc", "Consumable", "Ammo"]);
+
+  /** Item name, muted description, and cross-links to where it's crafted, used and dropped. */
+  function renderItemName(td, i) {
+    td.textContent = i.name;
+    if (i.description) {
+      const d = document.createElement("div");
+      d.className = "per-level";
+      d.textContent = i.description;
+      td.appendChild(d);
+    }
+    const links = [];
+    if (craftableItemIds.has(i.id)) links.push(wikiLink("Recipe", "recipes", { id: i.id }));
+    if (INGREDIENT_TYPES.has(i.type)) links.push(wikiLink("Used in", "recipes", { q: i.name }));
+    if (i.type === "Trophy" || i.type === "Material") links.push(wikiLink("Dropped by", "creatures", { q: i.name }));
+    if (links.length) {
+      const line = document.createElement("div");
+      line.className = "per-level";
+      links.forEach((a, n) => { if (n) line.append(" · "); line.appendChild(a); });
+      td.appendChild(line);
+    }
+  }
+
+  /** Appends "3 Wood, 2 Stone (+1/lvl)" to a cell, each item linking to its Items entry; `list` is [{item, amount, amountPerLevel?}]. */
+  function renderIngredients(td, list) {
+    list.forEach((x, i) => {
+      if (i) td.append(", ");
+      td.append(x.amount + " ");
+      td.appendChild(wikiLink(x.item.name, "items", { id: x.item.id }));
+      if (x.amountPerLevel) {
+        const perLevel = document.createElement("span");
+        perLevel.className = "per-level";
+        perLevel.textContent = " (+" + x.amountPerLevel + "/lvl)";
+        td.appendChild(perLevel);
+      }
+    });
+  }
+
+  const STAT_LABELS = { health: "Health", stamina: "Stamina", eitr: "Eitr" };
+
+  function itemStats(i) {
+    const parts = [];
+    if (i.damage) parts.push(describeAmounts(i.damage, i.damagePerLevel));
+    if (i.armor) parts.push("Armor " + i.armor + (i.armorPerLevel ? " (+" + i.armorPerLevel + "/lvl)" : ""));
+    if (i.blockPower) parts.push("Block " + i.blockPower);
+    if (i.food) {
+      const f = i.food;
+      parts.push(Object.keys(STAT_LABELS).filter(k => f[k]).map(k => STAT_LABELS[k] + " " + f[k]).join(", ") +
+        (f.burnTime ? ", lasts " + Math.round(f.burnTime / 60) + " min" : ""));
+    }
+    if (i.maxDurability) parts.push("Durability " + i.maxDurability);
+    if (i.movementModifier) parts.push("Movement " + Math.round(i.movementModifier * 100) + "%");
+    return parts.join(" · ");
+  }
+
+  function creatureSummary(c) {
+    const resist = Object.entries(c.damageModifiers || {}).map(([k, v]) => prettify(k) + ": " + prettify(v));
+    return resist.join(", ");
+  }
+
+  // ---- Pinned recipes (kept in this browser's localStorage) ----
+  const PINS_KEY = "valheim-tools.pinnedRecipes";
+  const EXPAND_KEY = "valheim-tools.expandCrafted";
+
+  /** @returns {Object<string,{qty: number, level: number}>} Pinned recipe id -> how many to make, and the quality level to make them at. */
+  function loadPins() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PINS_KEY));
+      return saved && typeof saved === "object" ? saved : {};
+    } catch (err) { return {}; }
+  }
+  let pins = loadPins();
+
+  function savePins() {
+    try { localStorage.setItem(PINS_KEY, JSON.stringify(pins)); } catch (err) { /* storage blocked: pins last until reload */ }
+    updatePinBadge();
+  }
+
+  function updatePinBadge() {
+    const n = Object.keys(pins).length;
+    document.getElementById("pinBadge").textContent = n ? " (" + n + ")" : "";
+  }
+
+  /** A star button that pins/unpins a recipe, or a building piece (pin id "piece:<id>"). */
+  function renderPinButton(td, pinId) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pin-btn";
+    const sync = () => {
+      button.textContent = pins[pinId] ? "★" : "☆";
+      button.title = pins[pinId] ? "Unpin from the materials list" : "Pin to the materials list";
+      button.setAttribute("aria-pressed", String(!!pins[pinId]));
+    };
+    sync();
+    button.addEventListener("click", () => {
+      if (pins[pinId]) delete pins[pinId];
+      else pins[pinId] = { qty: 1, level: 1 };
+      savePins();
+      sync();
+    });
+    td.appendChild(button);
+  }
+
+  function addHeaderCells(row, labels) {
+    for (const label of labels) {
+      const th = document.createElement("th");
+      th.textContent = label;
+      row.appendChild(th);
+    }
+  }
+
+  let pinData = null; // recipes.json and pieces.json, loaded once for the materials list
+
+  /**
+   * Shapes a building piece like a recipe (one piece per "craft", no upgrade levels) so the
+   * materials maths can treat both the same. Its pin id is "piece:<id>".
+   */
+  function pieceAsRecipe(p) {
+    return {
+      id: "piece:" + p.id,
+      kind: "piece",
+      tool: p.tool,
+      item: { id: p.id, name: p.name, maxQuality: 1 },
+      amount: 1,
+      enabled: true,
+      station: p.station,
+      minStationLevel: 1,
+      resources: p.resources.map(r => ({ item: r.item, amount: r.amount, amountPerLevel: 0, upgraderResource: false })),
+    };
+  }
+
+  /**
+   * Adds the raw cost of making `count` of a recipe's item to `totals`.
+   * Cost at quality level L is the base amount plus the per-level amount for each upgrade
+   * (amount + perLevel * (q - 1), summed for q = 1..L). With `expand`, ingredients that are
+   * themselves craftable are broken down into their own ingredients.
+   */
+  function addRecipeCost(recipe, count, level, expand, byItem, totals, crafted, stations, path) {
+    const crafts = Math.ceil(count / recipe.amount);
+    if (recipe.station) {
+      const known = stations.get(recipe.station.id);
+      if (!known || known.level < recipe.minStationLevel) stations.set(recipe.station.id, { station: recipe.station, level: recipe.minStationLevel });
+    }
+    for (const res of recipe.resources) {
+      if (res.upgraderResource) continue;
+      let perCraft = 0;
+      for (let q = 1; q <= level; q++) perCraft += res.amount + res.amountPerLevel * (q - 1);
+      const need = crafts * perCraft;
+      const sub = expand ? byItem.get(res.item.id) : null;
+      if (sub && !path.includes(sub.id)) {
+        crafted.set(res.item.id, { item: res.item, count: (crafted.get(res.item.id)?.count || 0) + need });
+        addRecipeCost(sub, need, 1, expand, byItem, totals, crafted, stations, [...path, sub.id]);
+      } else {
+        totals.set(res.item.id, { item: res.item, count: (totals.get(res.item.id)?.count || 0) + need });
+      }
+    }
+  }
+
+  /** "Recipe_SwordIron*2*3" = recipe id, how many, quality level (level omitted when 1). */
+  function serializePin(id, pin) {
+    return id + "*" + pin.qty + (pin.level > 1 ? "*" + pin.level : "");
+  }
+
+  /** Canonical text for a pin set, used to tell whether a shared list differs from your own. */
+  function serializePins(set) {
+    return Object.entries(set).map(([id, pin]) => serializePin(id, pin)).sort().join("&");
+  }
+
+  /** Reads `pin=` URL parameters, ignoring unknown recipes and clamping numbers to sane values. */
+  function parsePinParams(values, byId) {
+    const result = {};
+    for (const value of values) {
+      const [id, qty, level] = value.split("*");
+      const recipe = byId.get(id);
+      if (!recipe) continue;
+      result[id] = {
+        qty: Math.min(9999, Math.max(1, Math.floor(Number(qty)) || 1)),
+        level: Math.min(recipe.item.maxQuality || 1, Math.max(1, Math.floor(Number(level)) || 1)),
+      };
+    }
+    return result;
+  }
+
+  async function showPinnedPage() {
+    const out = document.getElementById("pinnedOutput");
+    if (!pinData) {
+      out.textContent = "Loading...";
+      try {
+        const [recipes, pieces] = await Promise.all(["recipes", "pieces"].map(async f => {
+          const res = await fetch("data/" + f + ".json");
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        }));
+        pinData = { recipes: recipes.recipes, pieces: pieces.pieces };
+      } catch (err) {
+        out.textContent = "";
+        out.appendChild(empty("Couldn't load recipes (" + err.message + "). If you opened this page from a file:// path, serve it over http instead."));
+        return;
+      }
+    }
+    if (currentPage() === "pinned") renderPinnedPage(out);
+  }
+
+  function renderPinnedPage(out) {
+    const recipes = pinData.recipes.filter(r => r.enabled);
+    const byId = new Map([...recipes, ...pinData.pieces.map(pieceAsRecipe)].map(r => [r.id, r]));
+    const byItem = new Map();
+    for (const r of recipes) if (!byItem.has(r.item.id)) byItem.set(r.item.id, r);
+    // Drop pins for recipes that no longer exist (e.g. after a game update).
+    for (const id of Object.keys(pins)) if (!byId.has(id)) delete pins[id];
+    savePins();
+
+    // The list lives in the URL (#/pinned?pin=Recipe_SwordIron*2*3&pin=piece:piece_workbench*1) so it can
+    // be shared. Opening a link whose list differs from your own pins shows it as a separate shared list
+    // and leaves your pins alone until you choose to save it.
+    const params = routeParams();
+    let shared = null;
+    if (params.has("pin")) {
+      const fromUrl = parsePinParams(params.getAll("pin"), byId);
+      if (serializePins(fromUrl) !== serializePins(pins)) shared = fromUrl;
+    }
+    const working = () => shared || pins;
+
+    let expand = true;
+    if (params.has("expand")) expand = params.get("expand") !== "0";
+    else if (shared) expand = true;
+    else try { expand = localStorage.getItem(EXPAND_KEY) !== "0"; } catch (err) { /* default on */ }
+
+    /** Saves the list (your pins only, not a shared list) and mirrors it into the address bar. */
+    function persist() {
+      if (!shared) savePins();
+      const query = new URLSearchParams();
+      for (const [id, pin] of Object.entries(working())) query.append("pin", serializePin(id, pin));
+      if (!expand) query.set("expand", "0");
+      const hash = "#/pinned" + (query.toString() ? "?" + query : "");
+      if (hash !== location.hash) history.replaceState(null, "", hash);
+    }
+    persist();
+
+    out.textContent = "";
+    if (shared) {
+      const banner = document.createElement("div");
+      banner.className = "wiki-chip";
+      banner.append("This is a shared list; your own pins haven't changed. ");
+      const save = document.createElement("button");
+      save.type = "button";
+      save.textContent = "Save as my pins";
+      save.addEventListener("click", () => { pins = shared; shared = null; persist(); renderPinnedPage(out); });
+      banner.append(save, " ", wikiLink("Back to my pins", "pinned", {}));
+      out.appendChild(banner);
+    }
+    if (!Object.keys(working()).length) {
+      const hint = document.createElement("p");
+      hint.className = "empty";
+      hint.append("Nothing pinned yet. Click the ☆ next to a recipe on the ");
+      hint.appendChild(wikiLink("Recipes", "recipes", {}));
+      hint.append(" or ");
+      hint.appendChild(wikiLink("Buildings", "buildings", {}));
+      hint.append(" page to add it here.");
+      out.appendChild(hint);
+      return;
+    }
+
+    const pinnedHost = document.createElement("div");
+    const totalsHost = document.createElement("div");
+    out.append(pinnedHost, totalsHost);
+
+    function drawTotals() {
+      totalsHost.textContent = "";
+      const totals = new Map(), crafted = new Map(), stations = new Map();
+      for (const [id, pin] of Object.entries(working())) {
+        addRecipeCost(byId.get(id), pin.qty * byId.get(id).amount, pin.level, expand, byItem, totals, crafted, stations, [id]);
+      }
+
+      const materials = [...totals.values()].sort((a, b) => a.item.name.localeCompare(b.item.name));
+      const table = document.createElement("table");
+      table.className = "pinned-table";
+      const head = table.createTHead().insertRow();
+      addHeaderCells(head, ["Material", "Total needed", "Stacks to carry"]);
+      const body = table.createTBody();
+      for (const m of materials) {
+        const tr = body.insertRow();
+        tr.insertCell().appendChild(wikiLink(m.item.name, "items", { id: m.item.id }));
+        tr.insertCell().textContent = m.count;
+        tr.insertCell().textContent = m.item.maxStack > 1 ? Math.ceil(m.count / m.item.maxStack) + " (max " + m.item.maxStack + " each)" : "";
+      }
+      const section = document.createElement("div");
+      section.className = "pinned-section";
+      section.appendChild(table);
+
+      const notes = document.createElement("p");
+      notes.className = "per-level";
+      if (stations.size) {
+        notes.append("Crafting stations needed: ");
+        [...stations.values()].forEach(({ station, level }, n) => {
+          if (n) notes.append(", ");
+          notes.appendChild(wikiLink(station.name, "buildings", { id: station.id }));
+          if (level > 1) notes.append(" (level " + level + ")");
+        });
+      }
+      if (crafted.size) {
+        if (stations.size) notes.appendChild(document.createElement("br"));
+        notes.append("Crafted along the way: " + [...crafted.values()].map(c => c.count + " " + c.item.name).join(", "));
+      }
+      section.appendChild(notes);
+      totalsHost.appendChild(card("Raw materials", materials.length, section,
+        "Everything to gather for the pinned recipes below" + (expand ? ", with crafted ingredients broken down into their own materials." : ", exactly as the recipes list them.")));
+    }
+
+    function drawPinned() {
+      pinnedHost.textContent = "";
+      const controls = document.createElement("div");
+      controls.className = "pinned-controls";
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = expand;
+      checkbox.addEventListener("change", () => {
+        expand = checkbox.checked;
+        if (!shared) try { localStorage.setItem(EXPAND_KEY, expand ? "1" : "0"); } catch (err) { /* not persisted */ }
+        persist();
+        drawTotals();
+      });
+      label.append(checkbox, " Break crafted ingredients (like Iron Nails) down into raw materials");
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.textContent = "Unpin all";
+      clear.addEventListener("click", () => { if (shared) shared = {}; else pins = {}; persist(); renderPinnedPage(out); });
+      const shareLink = document.createElement("input");
+      shareLink.type = "text";
+      shareLink.readOnly = true;
+      shareLink.className = "share-link";
+      shareLink.value = location.href;
+      shareLink.addEventListener("focus", () => shareLink.select());
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.textContent = "Copy share link";
+      copy.addEventListener("click", async () => {
+        shareLink.value = location.href;
+        try {
+          await navigator.clipboard.writeText(location.href);
+          copy.textContent = "Copied!";
+        } catch (err) {
+          shareLink.select(); // clipboard blocked: leave the link selected to copy by hand
+          copy.textContent = "Press Ctrl+C";
+        }
+        setTimeout(() => { copy.textContent = "Copy share link"; }, 2000);
+      });
+      controls.append(label, clear, shareLink, copy);
+
+      const table = document.createElement("table");
+      table.className = "pinned-table";
+      const head = table.createTHead().insertRow();
+      addHeaderCells(head, ["Recipe", "Station", "How many", "Quality level", ""]);
+      const body = table.createTBody();
+      for (const [id, pin] of Object.entries(working())) {
+        const r = byId.get(id);
+        const tr = body.insertRow();
+        tr.insertCell().appendChild(wikiLink(r.item.name, r.kind === "piece" ? "buildings" : "items", { id: r.item.id }));
+        const stationCell = tr.insertCell();
+        if (r.kind === "piece") stationCell.append("Build with " + r.tool + (r.station ? ", near " : ""));
+        if (r.station) {
+          stationCell.appendChild(wikiLink(r.station.name, "buildings", { id: r.station.id }));
+          if (r.minStationLevel > 1) stationCell.append(" (lvl " + r.minStationLevel + ")");
+        } else if (r.kind !== "piece") stationCell.textContent = "Hand-crafted";
+
+        const qty = document.createElement("input");
+        qty.type = "number";
+        qty.min = "1";
+        qty.value = pin.qty;
+        qty.addEventListener("input", () => {
+          pin.qty = Math.max(1, Math.floor(Number(qty.value)) || 1);
+          persist();
+          shareLink.value = location.href;
+          drawTotals();
+        });
+        tr.insertCell().appendChild(qty);
+
+        const levelCell = tr.insertCell();
+        const maxQuality = r.item.maxQuality || 1;
+        if (maxQuality > 1) {
+          const select = document.createElement("select");
+          for (let q = 1; q <= maxQuality; q++) select.add(new Option(q === 1 ? "1 (as crafted)" : "Upgraded to " + q, q));
+          select.value = Math.min(pin.level, maxQuality);
+          select.addEventListener("change", () => { pin.level = Number(select.value) || 1; persist(); shareLink.value = location.href; drawTotals(); });
+          levelCell.appendChild(select);
+        }
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Unpin";
+        remove.addEventListener("click", () => { delete working()[id]; persist(); renderPinnedPage(out); });
+        tr.insertCell().appendChild(remove);
+      }
+      const wrap = document.createElement("div");
+      wrap.append(controls, table);
+      pinnedHost.appendChild(card("Pinned recipes", Object.keys(working()).length, wrap,
+        "Set how many of each to make. For gear you can also pick the quality level to upgrade it to, which adds the upgrade costs."));
+    }
+
+    drawPinned();
+    drawTotals();
+  }
+
+  /** Name on the first line, muted description underneath. */
+  function renderNameWithDescription(td, row, description = row.description) {
+    td.textContent = row.name;
+    if (description) {
+      const d = document.createElement("div");
+      d.className = "per-level";
+      d.textContent = description;
+      td.appendChild(d);
+    }
+  }
+
+  /** "Name: tooltip" for a status effect, or "" when there isn't one. */
+  function describeEffect(effect) {
+    if (!effect) return "";
+    return effect.name + (effect.tooltip ? ": " + effect.tooltip : "");
+  }
+
+  const ARMOR_TYPES = ["Helmet", "Chest", "Legs", "Shoulder", "Utility"];
+  const num = v => (typeof v === "number" ? v : 0);
+
+  const WIKI_PAGES = {
+    recipes: {
+      label: "Recipes",
+      file: "recipes",
+      subtitle: "Crafting and cooking recipes.",
+      rowId: r => r.item.id,
+      rows: d => d.recipes.filter(r => r.enabled),
+      searchText: r => [r.item.name, ...r.resources.map(x => x.item.name)].join(" "),
+      filters: [{ key: "station", label: "All stations", value: r => r.station ? r.station.name : "Hand-crafted" }],
+      columns: [
+        { label: "Pin", render: (td, r) => renderPinButton(td, r.id) },
+        { label: "Item", value: r => r.item.name, render: (td, r) => {
+            td.appendChild(wikiLink(r.item.name, "items", { id: r.item.id }));
+            if (r.amount > 1) td.append(" ×" + r.amount);
+          } },
+        { label: "Station", value: r => r.station ? r.station.name : "Hand-crafted",
+          render: (td, r) => {
+            if (!r.station) { td.textContent = "Hand-crafted"; return; }
+            td.appendChild(wikiLink(r.station.name, "buildings", { id: r.station.id }));
+            if (r.minStationLevel > 1) td.append(" (lvl " + r.minStationLevel + ")");
+          } },
+        { label: "Ingredients", render: (td, r) => renderIngredients(td, r.resources.filter(x => !x.upgraderResource)) },
+      ],
+      note: "The per-level amount is added for each upgrade level of the item. Pin recipes (☆) to build a combined materials list. Buildings can be pinned too.",
+    },
+    items: {
+      label: "Items",
+      file: "items",
+      subtitle: "Weapons, armor, food, materials, trophies and everything else you can carry.",
+      rowId: i => i.id,
+      needsRecipes: true,
+      rows: d => d.items,
+      searchText: i => i.name + " " + i.id + " " + (i.description || ""),
+      filters: [{ key: "type", label: "All types", value: i => prettify(i.type) }],
+      columns: [
+        { label: "Name", value: i => i.name, render: renderItemName },
+        { label: "Type", value: i => prettify(i.type), render: (td, i) => { td.textContent = prettify(i.type) + (i.skill ? " (" + prettify(i.skill) + ")" : ""); } },
+        { label: "Stats", value: i => itemStats(i), render: (td, i) => { td.textContent = itemStats(i); } },
+        { label: "Weight", value: i => i.weight, render: (td, i) => { td.textContent = i.weight; } },
+        { label: "Stack", value: i => i.maxStack, render: (td, i) => { td.textContent = i.maxStack; } },
+      ],
+    },
+    armor: {
+      label: "Armor",
+      file: "items",
+      subtitle: "Helmets, chest pieces, leggings, capes and utility items, with set bonuses and resistances.",
+      rowId: i => i.id,
+      needsRecipes: true,
+      rows: d => d.items.filter(i => ARMOR_TYPES.includes(i.type)),
+      searchText: i => i.name + " " + i.id + " " + (i.set || "") + " " + (i.description || ""),
+      filters: [
+        { key: "slot", label: "All slots", value: i => prettify(i.type) },
+        { key: "set", label: "All sets", value: i => i.set ? prettify(i.set) : "(No set)" },
+      ],
+      columns: [
+        { label: "Name", value: i => i.name, render: renderItemName },
+        { label: "Slot", value: i => prettify(i.type), render: (td, i) => { td.textContent = prettify(i.type); } },
+        { label: "Armor", value: i => num(i.armor), render: (td, i) => { td.textContent = i.armor ? i.armor + (i.armorPerLevel ? " (+" + i.armorPerLevel + "/lvl)" : "") : ""; } },
+        { label: "Set bonus", value: i => i.set || "", render: (td, i) => {
+            td.textContent = i.set ? prettify(i.set) + (i.setSize ? " (" + i.setSize + " pieces)" : "") : "";
+            if (i.setEffect) {
+              const d = document.createElement("div");
+              d.className = "per-level";
+              d.textContent = describeEffect(i.setEffect);
+              td.appendChild(d);
+            }
+          } },
+        { label: "Resistances", render: (td, i) => { td.textContent = Object.entries(i.resistances || {}).map(([k, v]) => prettify(k) + ": " + prettify(v)).join(", "); } },
+        { label: "Movement", value: i => num(i.movementModifier), render: (td, i) => { td.textContent = i.movementModifier ? Math.round(i.movementModifier * 100) + "%" : ""; } },
+        { label: "Weight", value: i => i.weight, render: (td, i) => { td.textContent = i.weight; } },
+      ],
+    },
+    trinkets: {
+      label: "Trinkets",
+      file: "items",
+      subtitle: "Trinkets charge up as you fight, then unleash their effect.",
+      rowId: i => i.id,
+      needsRecipes: true,
+      rows: d => d.items.filter(i => i.type === "Trinket"),
+      searchText: i => i.name + " " + i.id + " " + (i.description || "") + " " + describeEffect(i.adrenalineEffect),
+      filters: [],
+      columns: [
+        { label: "Name", value: i => i.name, render: renderItemName },
+        { label: "Effect", value: i => i.adrenalineEffect ? i.adrenalineEffect.name : "", render: (td, i) => { td.textContent = i.adrenalineEffect ? i.adrenalineEffect.tooltip || i.adrenalineEffect.name : ""; } },
+        { label: "Charge needed", value: i => num(i.adrenaline), render: (td, i) => { td.textContent = i.adrenaline || ""; } },
+        { label: "Lasts", value: i => i.adrenalineEffect ? num(i.adrenalineEffect.duration) : 0, render: (td, i) => { td.textContent = i.adrenalineEffect && i.adrenalineEffect.duration ? i.adrenalineEffect.duration + " s" : ""; } },
+        { label: "Weight", value: i => i.weight, render: (td, i) => { td.textContent = i.weight; } },
+      ],
+    },
+    food: {
+      label: "Food & drink",
+      file: "items",
+      subtitle: "Food gives health, stamina and eitr for a while; meads and potions give a status effect instead.",
+      rowId: i => i.id,
+      needsRecipes: true,
+      rows: d => d.items.filter(i => i.food || i.consumeEffect),
+      searchText: i => i.name + " " + i.id + " " + (i.description || "") + " " + describeEffect(i.consumeEffect),
+      filters: [{ key: "kind", label: "Food and drink", value: i => i.food ? "Food" : "Meads & potions" }],
+      columns: [
+        { label: "Name", value: i => i.name, render: renderItemName },
+        { label: "Health", value: i => i.food ? i.food.health : 0, render: (td, i) => { td.textContent = i.food && i.food.health ? i.food.health : ""; } },
+        { label: "Stamina", value: i => i.food ? i.food.stamina : 0, render: (td, i) => { td.textContent = i.food && i.food.stamina ? i.food.stamina : ""; } },
+        { label: "Eitr", value: i => i.food ? i.food.eitr : 0, render: (td, i) => { td.textContent = i.food && i.food.eitr ? i.food.eitr : ""; } },
+        { label: "Regen", value: i => i.food ? i.food.regen : 0, render: (td, i) => { td.textContent = i.food && i.food.regen ? i.food.regen : ""; } },
+        { label: "Lasts", value: i => i.food ? i.food.burnTime : (i.consumeEffect ? num(i.consumeEffect.duration) : 0),
+          render: (td, i) => {
+            const seconds = i.food ? i.food.burnTime : (i.consumeEffect ? i.consumeEffect.duration : 0);
+            td.textContent = seconds ? Math.round(seconds / 60) + " min" : "";
+          } },
+        { label: "Effect", value: i => i.consumeEffect ? i.consumeEffect.name : "", render: (td, i) => { td.textContent = describeEffect(i.consumeEffect); } },
+      ],
+    },
+    buildings: {
+      label: "Buildings",
+      file: "pieces",
+      subtitle: "Everything the Hammer, Hoe, Cultivator and Serving Tray can place.",
+      rowId: p => p.id,
+      rows: d => d.pieces,
+      searchText: p => p.name + " " + p.id + " " + (p.description || "") + " " + p.resources.map(x => x.item.name).join(" "),
+      filters: [
+        { key: "tool", label: "All tools", value: p => p.tool },
+        { key: "category", label: "All categories", value: p => prettify(p.category) },
+      ],
+      columns: [
+        { label: "Pin", render: (td, p) => renderPinButton(td, "piece:" + p.id) },
+        { label: "Name", value: p => p.name, render: (td, p) => renderNameWithDescription(td, p) },
+        { label: "Tool", value: p => p.tool, render: (td, p) => { td.textContent = p.tool + " · " + prettify(p.category); } },
+        { label: "Requires", render: (td, p) => renderIngredients(td, p.resources) },
+        { label: "Needs station", value: p => p.station ? p.station.name : "", render: (td, p) => {
+            if (p.station) td.appendChild(wikiLink(p.station.name, "buildings", { id: p.station.id }));
+          } },
+        { label: "Comfort", value: p => p.comfort || 0, render: (td, p) => { td.textContent = p.comfort || ""; } },
+        { label: "Health", value: p => p.health || 0, render: (td, p) => { td.textContent = p.health || ""; } },
+      ],
+    },
+    creatures: {
+      label: "Creatures",
+      file: "creatures",
+      subtitle: "Animals, monsters and bosses with their base (level 1) stats, drops and damage resistances.",
+      rowId: c => c.id,
+      rows: d => d.creatures,
+      searchText: c => c.name + " " + c.id + " " + (c.drops || []).map(x => x.item.name).join(" "),
+      filters: [{ key: "faction", label: "All factions", value: c => prettify(c.faction) }],
+      columns: [
+        { label: "Name", value: c => c.name, render: (td, c) => { td.textContent = c.name + (c.boss ? " (boss)" : ""); } },
+        { label: "Faction", value: c => prettify(c.faction), render: (td, c) => { td.textContent = prettify(c.faction); } },
+        { label: "Health", value: c => c.health, render: (td, c) => { td.textContent = c.health; } },
+        { label: "Walk / run", value: c => c.runSpeed, render: (td, c) => { td.textContent = c.walkSpeed + " / " + c.runSpeed + (c.flying ? " (flies)" : ""); } },
+        { label: "Attacks", render: (td, c) => { td.textContent = (c.attacks || []).map(a => a.id + ": " + describeAmounts(a.damage)).join("; "); } },
+        { label: "Resistances", value: c => creatureSummary(c), render: (td, c) => { td.textContent = creatureSummary(c); } },
+        { label: "Drops", render: (td, c) => {
+            (c.drops || []).forEach((d, n) => {
+              if (n) td.append(", ");
+              td.append((d.min === d.max ? d.min : d.min + "–" + d.max) + " ");
+              td.appendChild(wikiLink(d.item.name, "items", { id: d.item.id }));
+              if (d.chance < 1) td.append(" (" + Math.round(d.chance * 100) + "%)");
+            });
+            if (c.taming) td.append((c.drops ? "; " : "") + "Tameable");
+          } },
+      ],
+    },
+  };
+
+  const wikiOutputEl = document.getElementById("wikiOutput");
+  const wikiViews = {}; // page key -> rendered card, kept so filters/search survive switching pages
+
+  /** Fetches a page's JSON the first time it's shown, builds its table, and swaps it into view. */
+  async function showWikiPage(key) {
+    wikiOutputEl.textContent = "";
+    if (wikiViews[key]) {
+      wikiOutputEl.appendChild(wikiViews[key]);
+      wikiViews[key].readUrl();
+      return;
+    }
+    const page = WIKI_PAGES[key];
+    wikiOutputEl.textContent = "Loading...";
+    let data;
+    try {
+      const res = await fetch("data/" + page.file + ".json");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      data = await res.json();
+    } catch (err) {
+      wikiOutputEl.textContent = "";
+      wikiOutputEl.appendChild(empty("Couldn't load " + page.label.toLowerCase() + " (" + err.message + "). If you opened this page from a file:// path, serve it over http instead."));
+      return;
+    }
+    if (page.needsRecipes) {
+      try {
+        const res = await fetch("data/recipes.json");
+        if (res.ok) craftableItemIds = new Set((await res.json()).recipes.filter(r => r.enabled).map(r => r.item.id));
+      } catch (err) { /* just no "Recipe" links */ }
+    }
+    wikiViews[key] = buildWikiView(key, page, data);
+    if (currentPage() === key) {
+      wikiOutputEl.textContent = "";
+      wikiOutputEl.appendChild(wikiViews[key]);
+      wikiViews[key].readUrl();
+    }
+  }
+
+  const WIKI_PAGE_SIZES = [25, 50, 100];
+
+  /** The `?a=b` part of the hash, e.g. `#/items?q=iron&page=2` -> {q: "iron", page: "2"}. */
+  function routeParams() {
+    return new URLSearchParams(location.hash.split("?")[1] || "");
+  }
+
+  /**
+   * Builds a wiki page's searchable, sortable, paginated table. All of its state lives in the
+   * URL hash (`#/items?q=iron&type=Shield&sort=weight&desc=1&page=2&size=50`) so views can be
+   * bookmarked and shared and the back button steps through pages; only non-default values are
+   * written. The returned card has a `readUrl()` that loads state from the hash and redraws.
+   */
+  function buildWikiView(key, page, data) {
+    const rows = page.rows(data);
+    const body = document.createElement("div");
+
+    const controls = document.createElement("div");
+    controls.className = "wiki-filters";
+    const search = document.createElement("input");
+    search.type = "search";
+    search.placeholder = "Search";
+    controls.appendChild(search);
+    const selects = page.filters.map(f => {
+      const select = document.createElement("select");
+      for (const label of [f.label, ...[...new Set(rows.map(f.value))].sort()]) {
+        const opt = document.createElement("option");
+        opt.value = label === f.label ? "" : label;
+        opt.textContent = label;
+        select.appendChild(opt);
+      }
+      controls.appendChild(select);
+      return { select, filter: f };
+    });
+
+    const tableHost = document.createElement("div");
+    tableHost.className = "wiki-table";
+    const pager = document.createElement("div");
+    pager.className = "wiki-pager";
+    const idChip = document.createElement("div");
+    idChip.className = "wiki-chip";
+    body.append(controls, idChip, tableHost, pager);
+
+    const sortKey = col => col.label.toLowerCase().replace(/[^a-z]+/g, "");
+    let sort = { index: -1, descending: false };
+    let idFilter = ""; // exact row id, set by links from other pages (?id=SwordIron)
+    let pageNumber = 1;
+    let pageSize = WIKI_PAGE_SIZES[0];
+
+    /** Loads search/filter/sort/page state from the hash into the controls, then redraws. */
+    function readUrl() {
+      const params = routeParams();
+      search.value = params.get("q") || "";
+      idFilter = params.get("id") || "";
+      for (const { select, filter } of selects) {
+        const wanted = params.get(filter.key) || "";
+        select.value = [...select.options].some(o => o.value === wanted) ? wanted : "";
+      }
+      sort = { index: page.columns.findIndex(c => c.value && sortKey(c) === params.get("sort")), descending: params.get("desc") === "1" };
+      pageSize = WIKI_PAGE_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : WIKI_PAGE_SIZES[0];
+      pageNumber = Math.max(1, parseInt(params.get("page"), 10) || 1);
+      draw();
+    }
+
+    /** Mirrors the current state into the hash; `push` adds a history entry so Back undoes it. */
+    function writeUrl(push) {
+      const params = new URLSearchParams();
+      if (idFilter) params.set("id", idFilter);
+      if (search.value.trim()) params.set("q", search.value.trim());
+      for (const { select, filter } of selects) if (select.value) params.set(filter.key, select.value);
+      if (sort.index >= 0) {
+        params.set("sort", sortKey(page.columns[sort.index]));
+        if (sort.descending) params.set("desc", "1");
+      }
+      if (pageSize !== WIKI_PAGE_SIZES[0]) params.set("size", pageSize);
+      if (pageNumber > 1) params.set("page", pageNumber);
+      const query = params.toString();
+      const hash = "#/" + key + (query ? "?" + query : "");
+      if (hash !== location.hash) history[push ? "pushState" : "replaceState"](null, "", hash);
+    }
+
+    /** Changes state via `change()`, then redraws and records it in the URL. */
+    function update(change, { push = true, resetPage = true } = {}) {
+      change();
+      if (resetPage) pageNumber = 1;
+      draw();
+      writeUrl(push);
+    }
+
+    function pagerButton(label, target, disabled) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.disabled = disabled;
+      button.addEventListener("click", () => update(() => { pageNumber = target; }, { resetPage: false }));
+      return button;
+    }
+
+    /** A removable "Showing only: Iron Sword" tag while an id filter from a link is active. */
+    function drawIdChip(shown) {
+      idChip.textContent = "";
+      idChip.hidden = !idFilter;
+      if (!idFilter) return;
+      const label = shown.length ? page.columns.find(c => c.value).value(shown[0]) : idFilter; // first sortable column is the name
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.textContent = "Show all ✕";
+      clear.addEventListener("click", () => update(() => { idFilter = ""; }));
+      idChip.append("Showing only: " + label + " ", clear);
+    }
+
+    function drawPager(total) {
+      pager.textContent = "";
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      const label = document.createElement("span");
+      label.className = "page-info";
+      label.textContent = "Page " + pageNumber + " of " + pages;
+      const sizeSelect = document.createElement("select");
+      for (const size of WIKI_PAGE_SIZES) {
+        const opt = document.createElement("option");
+        opt.value = size;
+        opt.textContent = size + " per page";
+        opt.selected = size === pageSize;
+        sizeSelect.appendChild(opt);
+      }
+      sizeSelect.addEventListener("change", () => update(() => { pageSize = Number(sizeSelect.value); }));
+      pager.append(
+        pagerButton("« First", 1, pageNumber <= 1),
+        pagerButton("‹ Prev", pageNumber - 1, pageNumber <= 1),
+        label,
+        pagerButton("Next ›", pageNumber + 1, pageNumber >= pages),
+        pagerButton("Last »", pages, pageNumber >= pages),
+        sizeSelect);
+    }
+
+    function draw() {
+      const q = search.value.trim().toLowerCase();
+      let shown = rows.filter(r =>
+        (!idFilter || page.rowId(r) === idFilter) &&
+        selects.every(({ select, filter }) => !select.value || filter.value(r) === select.value) &&
+        (!q || page.searchText(r).toLowerCase().includes(q)));
+
+      const sortColumn = page.columns[sort.index];
+      if (sortColumn && sortColumn.value) {
+        const dir = sort.descending ? -1 : 1;
+        shown = shown.slice().sort((a, b) => {
+          const x = sortColumn.value(a), y = sortColumn.value(b);
+          return dir * (typeof x === "number" ? x - y : String(x).localeCompare(String(y)));
+        });
+      }
+
+      tableHost.textContent = "";
+      drawIdChip(shown);
+      count.textContent = "(" + shown.length + (shown.length === rows.length ? "" : " of " + rows.length) + ")";
+      pageNumber = Math.min(pageNumber, Math.max(1, Math.ceil(shown.length / pageSize)));
+      drawPager(shown.length);
+      if (!shown.length) {
+        tableHost.appendChild(empty("Nothing matches."));
+        return;
+      }
+
+      const table = document.createElement("table");
+      const headRow = table.createTHead().insertRow();
+      page.columns.forEach((col, index) => {
+        const th = document.createElement("th");
+        th.textContent = col.label + (sort.index === index ? (sort.descending ? " ▼" : " ▲") : "");
+        if (col.value) {
+          th.className = "sortable";
+          th.addEventListener("click", () => update(() => {
+            sort = { index, descending: sort.index === index && !sort.descending };
+          }));
+        }
+        headRow.appendChild(th);
+      });
+      const tbody = table.createTBody();
+      for (const row of shown.slice((pageNumber - 1) * pageSize, pageNumber * pageSize)) {
+        const tr = tbody.insertRow();
+        for (const col of page.columns) col.render ? col.render(tr.insertCell(), row) : (tr.insertCell().textContent = col.value(row));
+      }
+      tableHost.appendChild(table);
+    }
+    search.addEventListener("input", () => update(() => {}, { push: false })); // typing shouldn't flood history
+    selects.forEach(({ select }) => select.addEventListener("change", () => update(() => {})));
+
+    const view = card(page.label, rows.length, body,
+      page.subtitle + " Extracted from the game's own data" + (data.buildId ? " (Steam build " + data.buildId + ")" : "") + "." + (page.note ? " " + page.note : ""));
+    const count = view.querySelector(".count");
+    view.readUrl = readUrl;
+    return view;
+  }
+
+  /** The current route: "home" (`#/`), "saves", "pinned", or a WIKI_PAGES key. */
+  function currentPage() {
+    const key = location.hash.replace(/^#\/?/, "").split("?")[0];
+    return key === "saves" || key === "pinned" || WIKI_PAGES[key] ? key : "home";
+  }
+
+  let saveViewStale = false; // game data arrived while the save parser wasn't visible
+
+  function showPage() {
+    const page = currentPage();
+    const container = page === "home" || page === "saves" || page === "pinned" ? page : "wiki";
+    document.querySelectorAll("[data-page-content]").forEach(el => { el.hidden = el.dataset.pageContent !== container; });
+    document.querySelectorAll(".site-nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page));
+    document.getElementById("gameDataToggle").classList.toggle("active", container === "wiki");
+    if (container === "wiki") {
+      document.getElementById("wikiSubtitle").textContent = WIKI_PAGES[page].subtitle;
+      showWikiPage(page);
+    } else if (page === "pinned") {
+      showPinnedPage();
+    } else if (page === "saves" && saveViewStale) {
+      saveViewStale = false;
+      loadedCharacters.forEach(c => resolveItemNames(c.result));
+      renderActiveView();
+    }
+  }
+  window.addEventListener("hashchange", showPage);
+  updatePinBadge();
+  showPage();
+  loadGameData();
 
   dropzone.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", e => { if (e.target.files.length) handleFiles(e.target.files); });

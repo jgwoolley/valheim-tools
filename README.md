@@ -22,4 +22,5 @@ Pushing to `main` runs `.github/workflows/deploy.yml`, which builds and deploys 
 
 - `public/` — the actual site (everything that gets deployed)
 - `scripts/` — small Node scripts used by `npm install` / `npm run build`
+- `extract/` — scripts and a .NET project that pull recipes, items, buildings and creatures out of the game files into `public/data/` (see `extract/README.md`)
 - `.github/workflows/` — the GitHub Pages deploy pipeline
