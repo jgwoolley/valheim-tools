@@ -6,6 +6,25 @@ Older detail is in `git log`.
 
 ## 2026-10-26
 
+- **Achievement progress** in the save file parser: a new Achievements tab shows how close the selected character is to every achievement, closest first,
+  with a progress bar and what is still missing (kills, crafts, pieces placed and stat counters, with how many you have of each). Needs the data in
+  `public/data/achievements.json`. Hard-difficulty achievements are the least certain: they are judged against the per-difficulty stats copy at the
+  achievement's difficulty index, which is not verified.
+- **Achievements** page: all 53 achievements with what each asks for (kills, crafting, building, stats, other achievements), secret ones marked,
+  and the long "do everything" lists tucked into a collapsed list whose entries link to their item, building or creature.
+- **Lore** now says where to find it: which runestone, rune tablet or vegvisir holds each text and where it generates (location, biome, how many per
+  world), and vegvisirs are listed with the boss location each one reveals (230 entries). Runestone texts follow the location's own override where the
+  game has one (the Ashlands runestone's base prefab still lists Mistlands texts).
+- **Wiki look**: the whole site now uses the same design as the Vintage Story wiki (green title bar with a search box, left navigation panels, a parchment
+  page with serif headings and breadcrumbs, light and dark themes following your system setting), by sharing its stylesheet (`public/wiki.css`, copied
+  from that project). The old header menu moved into the sidebar.
+- **Lore** page (Game Info): the game's runestone and cave-painting lore, the Hugin and Munin tutorial pop-ups and the dreams, in its own words, with
+  search and a kind filter (219 entries). The save file parser's Tutorials Seen and Known Texts link to the matching entry.
+- **Search box in the header** finds items, buildings and creatures by name and jumps to their entry (press `/` to focus it).
+- **Tables use the wiki's table controls**: search, filter dropdowns, sortable headers, "Showing 26-50 of 183" and Prev/Next buttons, and a removable tag for
+  filters that come from a link. All of it is still in the page address.
+- On narrow screens the sidebar becomes a menu behind the header's menu button.
+
 - **Weapons** page (Game Info menu): every melee weapon, bow, crossbow, staff, fist weapon and arrow with its damage (total and breakdown), damage at max
   upgrade level, block and parry, stamina cost for the normal and secondary attack, knockback, backstab bonus, tier and durability.
   Totals leave out chop and pickaxe damage, which only matters against trees and rocks.

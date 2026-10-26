@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nf3t's Valhiem Tools</title>
 <meta name="description" content="Parses and displays Valheim .fch character files entirely in your browser.">
-<meta name="theme-color" content="#c99a44">
+<meta name="theme-color" content="#566a2b">
 
 <!-- Social share preview (Facebook/Discord read Open Graph tags; Twitter
      reads its own twitter: tags but falls back to og: for anything it's
@@ -29,33 +29,40 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Valheim Viewer">
+<link rel="stylesheet" href="wiki.css">
 <style>
+  /* Site-specific rules. Colors, header, sidebar, tables, cards and the datatable controls come from wiki.css (shared with vintage-story-wiki). */
   :root {
-    --bg: #16130f;
-    --panel: #201b15;
-    --panel-alt: #241f16;
-    --border: #3a3226;
-    --text: #ece4d3;
-    --muted: #a89a80;
-    --accent: #c99a44;
-    --accent2: #7a6032;
-    --danger: #c15b4a;
-    --info: #c99a44;
-    --info-bg: #241d12;
-    --ok: #6fa06a;
-    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --danger: #b3402e;
+    --ok: #3f7d3a;
+    --info-bg: color-mix(in srgb, var(--accent) 10%, var(--card));
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 2rem;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.4;
+  @media (prefers-color-scheme: dark) {
+    :root { --danger: #c15b4a; --ok: #6fa06a; }
   }
-  h1 { font-size: 1.4rem; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.55rem; }
-  .app-icon { width: 1.7em; height: 1.7em; flex-shrink: 0; }
+  .subtitle { color: var(--muted); }
+  .card h2 {
+    font: 600 1rem/1.3 "Segoe UI", system-ui, sans-serif; border-bottom: 0; padding: 0;
+  }
+  .content .card { box-shadow: none; }
+  .datatable-filter-toggle option { color: var(--fg); background: var(--card); }
+  .datatable-pagination select { margin-left: auto; }
+  .datatable-chip { color: var(--fg); }
+  .datatable-info a { color: var(--link); }
+  /* Wide tables scroll sideways inside their box instead of squeezing cells into one-letter columns (.content breaks long words anywhere). */
+  .datatable { overflow-x: auto; }
+  .datatable td, .datatable th { overflow-wrap: normal; }
+  .datatable td { min-width: 4rem; vertical-align: top; }
+  .datatable td .per-level { min-width: 13rem; max-width: 24rem; }
+  .pin-btn { padding: 0 0.2rem; }
+  .coverage-note button { padding: 0.25rem 0.7rem; margin: 0 0.4rem; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+  .coverage-note button:hover { border-color: var(--accent); }
+  .wiki-note { color: var(--muted); font-size: 0.85rem; }
+  .wiki-search-results { max-height: 24rem; overflow-y: auto; }
+  .wiki-panel li a .badge { color: var(--accent); }
+  .site-footer .build-info { margin: 0; }
+  [data-page-content][hidden] { display: none; }
+
   .subtitle { color: var(--muted); margin: 0 0 1.5rem; font-size: 0.9rem; }
   #dropzone {
     border: 2px dashed var(--border);
@@ -65,28 +72,22 @@
     cursor: pointer;
     transition: border-color .15s, background .15s;
     color: var(--muted);
-    background: var(--panel);
+    background: var(--card);
   }
-  #dropzone.drag { border-color: var(--accent); background: var(--panel-alt); color: var(--text); }
-  #dropzone strong { color: var(--text); }
+  #dropzone.drag { border-color: var(--accent); background: var(--bg); color: var(--fg); }
+  #dropzone strong { color: var(--fg); }
   #fileInput { display: none; }
   .file-meta { margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--muted); font-family: var(--mono); }
   #errors, #notes, #uploadErrors { margin: 1rem 0; }
   .error {
-    background: #241512; border: 1px solid var(--danger); color: #f2beb3;
+    background: color-mix(in srgb, var(--danger) 12%, var(--card)); border: 1px solid var(--danger); color: var(--fg);
     padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
   }
   .note {
-    background: var(--info-bg); border: 1px solid var(--accent2); color: #e8d9b8;
+    background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid var(--accent); color: var(--fg);
     padding: 0.6rem 0.9rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
   }
   #output { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.1rem 1.3rem;
-  }
   .card h2 {
     margin: 0 0 0.9rem;
     font-size: 1rem;
@@ -97,7 +98,7 @@
   }
   .card h2 .count { color: var(--muted); font-weight: normal; font-size: 0.8rem; }
   .section-desc { margin: -0.4rem 0 0.9rem; font-size: 0.85rem; color: var(--muted); }
-  .world-card { background: var(--panel-alt); margin-bottom: 0.75rem; }
+  .world-card { background: var(--bg); margin-bottom: 0.75rem; }
   .world-card h2 { font-size: 0.9rem; }
   .grid {
     display: grid;
@@ -105,21 +106,18 @@
     gap: 0.75rem;
   }
   .tile {
-    background: var(--panel-alt);
+    background: var(--bg);
     border-radius: 8px;
     padding: 0.6rem 0.8rem;
   }
   .tile .label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
   .tile .value { font-size: 1.15rem; font-weight: 600; margin-top: 0.15rem; word-break: break-all; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .03em; }
   tr:last-child td { border-bottom: none; }
   tr.jumpable { cursor: pointer; }
-  tr.jumpable:hover td { background: var(--panel-alt); color: var(--accent); }
+  tr.jumpable:hover td { background: var(--bg); color: var(--accent); }
   tr.row-flash td { animation: row-flash 1.5s ease-out; }
   @keyframes row-flash {
-    0% { background: var(--accent); color: #16130f; }
+    0% { background: var(--accent); color: var(--card); }
     100% { background: transparent; }
   }
   .player-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
@@ -127,58 +125,27 @@
   .cell-steam-id a { color: var(--accent); text-decoration: underline dotted; }
   .cell-steam-id a:hover { text-decoration: underline solid; }
   .level-wrap { display: flex; align-items: center; gap: 0.5rem; }
-  .barwrap { background: var(--panel-alt); border-radius: 4px; overflow: hidden; height: 8px; width: 100%; min-width: 80px; }
+  .barwrap { background: var(--bg); border-radius: 4px; overflow: hidden; height: 8px; width: 100%; min-width: 80px; }
   .bar { background: var(--accent); height: 100%; }
   .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(255,255,255,.2); }
   .empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
   details > summary { cursor: pointer; color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
-  .wiki-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-  .wiki-filters input, .wiki-filters select, .wiki-pager select, .wiki-pager button {
-    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
-    border-radius: 6px; font: inherit; font-size: 0.85rem; padding: 0.4rem 0.7rem;
-  }
-  .wiki-filters input { flex: 1 1 14rem; min-width: 0; }
-  .wiki-filters select { flex: 0 1 auto; max-width: 100%; cursor: pointer; }
-  .wiki-filters input:focus, .wiki-filters select:focus, .wiki-pager select:focus { outline: none; border-color: var(--accent); }
-  .wiki-filters input::placeholder { color: var(--muted); }
-  .wiki-table { overflow-x: auto; }
-  .wiki-table th.sortable { cursor: pointer; user-select: none; }
-  .wiki-table th.sortable:hover { color: var(--accent); }
-  .wiki-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; font-size: 0.8rem; color: var(--muted); }
-  .wiki-pager .page-info { padding: 0 0.5rem; }
-  .wiki-pager button { cursor: pointer; }
-  .wiki-pager button:hover:not(:disabled), .wiki-pager select:hover { border-color: var(--accent); }
-  .wiki-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .wiki-pager select { cursor: pointer; }
-  #page-home h1 { font-size: 1.7rem; margin: 0 0 0.75rem; }
-  #page-home h2 { font-size: 1.2rem; margin: 1.75rem 0 0.5rem; }
-  .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 0.5rem; margin: 1rem 0; }
-  .grid-list a, .grid-list a:visited { display: block; padding: 0.6rem 0.85rem; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text); text-decoration: none; }
-  .grid-list a:hover { border-color: var(--accent); }
-  .grid-list a strong { display: block; }
-  .grid-list a span.muted { display: block; font-size: 0.82rem; margin-top: 0.15rem; color: var(--muted); }
-  .card-icon { display: inline-block; width: 1.4em; text-align: center; }
   #pinBadge { color: var(--accent); }
   .pin-btn { background: none; border: none; color: var(--accent); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.25rem; }
   .pinned-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
   .pinned-controls button, .pinned-table input, .pinned-table select, .pinned-table button {
-    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
     border-radius: 6px; font: inherit; font-size: 0.85rem; padding: 0.25rem 0.6rem; cursor: pointer;
   }
   .pinned-table input { width: 4.5rem; cursor: text; }
-  .pinned-controls .share-link { flex: 1 1 16rem; min-width: 0; width: auto; cursor: text; background: var(--panel-alt); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; padding: 0.25rem 0.6rem; }
+  .pinned-controls .share-link { flex: 1 1 16rem; min-width: 0; width: auto; cursor: text; background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; padding: 0.25rem 0.6rem; }
   .pinned-controls button:hover, .pinned-table button:hover { border-color: var(--accent); }
   .pinned-section + .pinned-section { margin-top: 1rem; }
-  .wiki-chip { margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
-  .wiki-chip button { margin-left: 0.4rem; background: var(--panel-alt); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.8rem; padding: 0.2rem 0.6rem; cursor: pointer; }
-  .wiki-chip button:hover { border-color: var(--accent); }
-  .wiki-link, .wiki-link:visited { color: var(--accent); text-decoration: underline dotted; }
-  .wiki-link:hover { text-decoration: underline solid; }
   .per-level { color: var(--muted); font-size: 0.75rem; }
   .strings-scroll { max-height: 320px; overflow-y: auto; margin-top: 0.5rem; }
   .hexdump {
     font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
-    background: var(--panel-alt); padding: 0.7rem; border-radius: 8px;
+    background: var(--bg); padding: 0.7rem; border-radius: 8px;
     overflow-x: auto; white-space: pre;
   }
   .mono { font-family: var(--mono); }
@@ -191,45 +158,46 @@
   .stat-subheading:first-child { margin-top: 0; }
   .pagination { display: flex; align-items: center; justify-content: center; gap: 0.9rem; margin-top: 0.6rem; font-size: 0.78rem; color: var(--muted); }
   .pagination button {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer;
   }
   .pagination button:hover:not(:disabled) { border-color: var(--accent); }
   .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
   .list-search {
     display: block; width: 100%; box-sizing: border-box; margin-bottom: 0.6rem;
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.45rem 0.7rem; border-radius: 6px; font-size: 0.85rem;
   }
   .list-search:focus { outline: none; border-color: var(--accent); }
   .section-nav { display: flex; align-items: center; gap: 0.6rem; }
   .section-nav button {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;
   }
   .section-nav button:hover:not(:disabled) { border-color: var(--accent); }
   .section-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
   #resetBtn, #clearKnownDataBtn {
-    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
     padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
   }
   #resetBtn { margin-left: auto; }
   #resetBtn:hover, #clearKnownDataBtn:hover { border-color: var(--danger); }
+  #clearKnownDataBtn { margin-left: auto; } /* sits at the right end of the tab bar */
   .toprow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .picker-bar {
     display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
     padding: 0.75rem 1rem;
   }
   #worldPanel > .picker-bar { margin-bottom: 1rem; }
   .picker-bar label { color: var(--muted); font-size: 0.85rem; }
   .picker-bar select, .picker-bar input[type="text"] {
-    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
     padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.9rem; flex: 1; min-width: 160px;
   }
   .picker-bar input[type="text"]:focus { outline: none; border-color: var(--accent); }
   .picker-bar button.primary-btn {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; flex-shrink: 0;
   }
   .picker-bar button.primary-btn:hover { border-color: var(--accent); }
@@ -239,8 +207,8 @@
   .legend-spawn { background: #6fa06a; }
   .legend-logout { background: #6a8caf; }
   .legend-death { background: #c15b4a; }
-  .legend-pin { background: #cbb999; }
-  .legend-auto { background: #4a4033; }
+  .legend-pin { background: #a89a80; }
+  .legend-auto { background: #7a6c55; }
   .legend-explored { background: rgba(203,185,153,0.55); border: 1px solid var(--border); }
   .legend-boss { background: #8b1a1a; }
   .pin-map { height: 380px; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; }
@@ -258,7 +226,7 @@
   .path-table td.path { display: flex; align-items: center; gap: 0.6rem; }
   .path-table .path-text { word-break: break-all; flex: 1; min-width: 0; } /* long, punctuation-sparse paths need this to wrap instead of overflowing */
   .copy-path-btn {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.2rem 0.55rem; border-radius: 5px; font-size: 0.72rem; font-family: inherit;
     cursor: pointer; flex-shrink: 0; white-space: nowrap;
   }
@@ -268,34 +236,10 @@
   .path-table tr.detected-os td.platform { box-shadow: inset 3px 0 0 var(--accent); color: var(--accent); }
   .os-badge {
     display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.4rem; border-radius: 999px;
-    background: var(--accent); color: #16130f; font-size: 0.65rem; font-weight: 700;
+    background: var(--accent); color: var(--card); font-size: 0.65rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: .04em; vertical-align: middle; white-space: nowrap;
   }
-  .site-header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; padding-bottom: 0.75rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
-  .site-header .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; }
-  .site-header .brand .app-icon { width: 1.6rem; height: 1.6rem; }
-  .site-header .nav-info { margin-left: auto; }
-  .site-nav { display: flex; gap: 1rem; }
-  .site-nav a, .site-nav a:visited { color: var(--muted); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; }
-  .site-nav a:hover { color: var(--text); }
-  .site-nav .nav-dropdown-toggle { color: var(--muted); padding-bottom: 2px; border-bottom: 2px solid transparent; text-decoration: none; }
-  .site-nav .nav-dropdown-toggle:hover { color: var(--text); text-decoration: none; }
-  .site-nav .nav-dropdown-toggle.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .site-nav .nav-dropdown-panel a { border-bottom: none; color: var(--text); }
-  .site-nav .nav-dropdown-panel a.active { color: var(--accent); }
-  .site-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
   [data-page-content][hidden] { display: none; }
-  .nav-dropdown { position: relative; }
-  .nav-dropdown-toggle { font: inherit; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
-  .nav-dropdown-toggle:hover, .nav-dropdown-toggle[aria-expanded="true"] { text-decoration: underline; }
-  .nav-dropdown-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; min-width: 14rem; flex-direction: column; gap: 0.15rem; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-  .nav-dropdown .nav-dropdown-panel-right { left: auto; right: 0; }
-  .nav-dropdown-panel[hidden] { display: none; }
-  .nav-dropdown-panel:not([hidden]) { display: flex; }
-  .nav-dropdown-panel a, .nav-dropdown-panel a:visited { padding: 0.35rem 0.5rem; border-radius: 4px; white-space: nowrap; text-decoration: none; color: var(--text); }
-  .nav-dropdown-panel a:hover, .nav-dropdown-panel a:focus-visible, .nav-dropdown-panel a:active { background: var(--bg); color: var(--accent); outline: none; }
-  .site-header .brand, .site-header .brand:visited, .site-header .brand:hover, .site-header .brand:active { color: var(--text); }
-  .nav-dropdown-toggle:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
   @media (max-width: 640px) {
     /* A fixed two-column layout squeezes these long paths into an
        unreadably narrow column on a phone — stack each row into label-then-
@@ -321,22 +265,22 @@
   #characterList { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
   .char-row {
     display: flex; align-items: center; gap: 0.6rem;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
     padding: 0.5rem 0.7rem;
   }
   .char-row.selected { border-color: var(--accent); }
   .char-select-btn {
-    flex: 1; text-align: left; background: none; border: none; color: var(--text);
+    flex: 1; text-align: left; background: none; border: none; color: var(--fg);
     font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0;
   }
   .char-row.selected .char-select-btn { color: var(--accent); font-weight: 600; }
   .char-remove-btn {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border); color: var(--muted);
     border-radius: 5px; width: 1.6rem; height: 1.6rem; cursor: pointer; font-size: 0.8rem; flex-shrink: 0;
   }
   .char-remove-btn:hover { border-color: var(--danger); color: var(--danger); }
   .view-tab {
-    background: var(--panel-alt); border: 1px solid var(--border); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;
   }
   .view-tab:hover:not(:disabled) { border-color: var(--accent); }
@@ -351,34 +295,62 @@
 <body>
 
 <header class="site-header">
-  <a class="brand" href="#/"><img src="icon.svg" alt="" class="app-icon">Nf3t's Valhiem Tools</a>
-  <nav class="site-nav" aria-label="Pages">
-    <div class="nav-dropdown">
-      <button type="button" class="nav-dropdown-toggle" id="gameDataToggle" aria-haspopup="true" aria-expanded="false">Game Info ▾</button>
-      <div class="nav-dropdown-panel" hidden>
-        <a href="#/recipes" data-page="recipes">Recipes</a>
-        <a href="#/items" data-page="items">Items</a>
-        <a href="#/weapons" data-page="weapons">Weapons</a>
-        <a href="#/armor" data-page="armor">Armor</a>
-        <a href="#/trinkets" data-page="trinkets">Trinkets</a>
-        <a href="#/food" data-page="food">Food &amp; drink</a>
-        <a href="#/processing" data-page="processing">Smelting &amp; cooking</a>
-        <a href="#/buildings" data-page="buildings">Buildings</a>
-        <a href="#/creatures" data-page="creatures">Creatures</a>
-      </div>
-    </div>
-    <a href="#/pinned" data-page="pinned">Materials list<span id="pinBadge"></span></a>
-    <a href="#/saves" data-page="saves">Save File Parser</a>
-  </nav>
-  <div class="nav-dropdown nav-info">
-    <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">More</button>
-    <div class="nav-dropdown-panel nav-dropdown-panel-right" hidden>
-      <a href="https://www.nf3t.com" target="_blank" rel="noopener noreferrer">NF3t tools</a>
-      <a href="https://www.nf3t.com/#/aistance" target="_blank" rel="noopener noreferrer">Stance on AI</a>
-      <a href="https://github.com/jgwoolley/valheim-tools" target="_blank" rel="noopener noreferrer">Source</a>
-    </div>
-  </div>
+  <button type="button" class="wiki-menu-toggle" id="wikiMenuToggle" aria-controls="wikiSidebar" aria-expanded="false" aria-label="Menu">&#9776;</button>
+  <a class="brand" href="#/"><img src="icon.svg" alt="" class="app-icon"><span class="brand-text">Nf3t's Valhiem <span class="brand-sub">Tools</span></span></a>
+  <form class="wiki-search" role="search" id="wikiSearchForm">
+    <input type="search" id="wikiSearch" placeholder="Search items, buildings, creatures... (press /)" aria-label="Search items, buildings and creatures" autocomplete="off" aria-controls="wikiSearchResults">
+    <ul class="wiki-search-results" id="wikiSearchResults" role="listbox" hidden></ul>
+  </form>
 </header>
+<div class="wiki-body">
+<aside class="wiki-sidebar" id="wikiSidebar">
+  <nav class="wiki-panel" aria-label="Navigation">
+    <h2>Navigation</h2>
+    <ul>
+      <li><a href="#/" data-page="home">Main page</a></li>
+      <li><a href="#/recipes" data-page="recipes">Recipes</a></li>
+      <li><a href="#/items" data-page="items">Items</a></li>
+      <li><a href="#/creatures" data-page="creatures">Creatures</a></li>
+      <li><a href="#/lore" data-page="lore">Lore</a></li>
+      <li><a href="#/achievements" data-page="achievements">Achievements</a></li>
+      <li><a href="#/pinned" data-page="pinned">Materials list<span id="pinBadge" class="badge"></span></a></li>
+    </ul>
+  </nav>
+  <nav class="wiki-panel" aria-label="Gear">
+    <h2>Gear</h2>
+    <ul>
+      <li><a href="#/weapons" data-page="weapons">Weapons</a></li>
+      <li><a href="#/armor" data-page="armor">Armor</a></li>
+      <li><a href="#/trinkets" data-page="trinkets">Trinkets</a></li>
+      <li><a href="#/food" data-page="food">Food &amp; drink</a></li>
+    </ul>
+  </nav>
+  <nav class="wiki-panel" aria-label="Crafting">
+    <h2>Crafting</h2>
+    <ul>
+      <li><a href="#/processing" data-page="processing">Smelting &amp; cooking</a></li>
+      <li><a href="#/buildings" data-page="buildings">Buildings</a></li>
+    </ul>
+  </nav>
+  <nav class="wiki-panel" aria-label="Save files">
+    <h2>Save files</h2>
+    <ul>
+      <li><a href="#/saves" data-page="saves">Save File Parser</a></li>
+    </ul>
+  </nav>
+  <nav class="wiki-panel" aria-label="About">
+    <h2>About</h2>
+    <ul>
+      <li><a href="https://www.nf3t.com" target="_blank" rel="noopener noreferrer">NF3t tools</a></li>
+      <li><a href="https://www.nf3t.com/#/aistance" target="_blank" rel="noopener noreferrer">Stance on AI</a></li>
+      <li><a href="https://vintagestory-wiki.nf3t.com" target="_blank" rel="noopener noreferrer">Vintage Story wiki</a></li>
+      <li><a href="https://github.com/jgwoolley/valheim-tools" target="_blank" rel="noopener noreferrer">Source code</a></li>
+    </ul>
+  </nav>
+</aside>
+<main class="content">
+<nav class="breadcrumb" id="breadcrumb" aria-label="Breadcrumb" hidden></nav>
+
 <div id="page-home" data-page-content="home" hidden>
   <h1>Nf3t's Valheim Tools</h1>
   <p>
@@ -446,6 +418,16 @@
       <span class="muted">Health, speed, attacks, resistances and drops of every animal, monster and boss.</span>
       <span class="muted" data-count="creatures"></span>
     </a>
+    <a href="#/lore">
+      <strong><span class="card-icon" aria-hidden="true">📖</span> Lore</strong>
+      <span class="muted">Runestone and cave-painting lore, Hugin and Munin's tutorials, and dreams, in the game's own words.</span>
+      <span class="muted" data-count="lore"></span>
+    </a>
+    <a href="#/achievements">
+      <strong><span class="card-icon" aria-hidden="true">🏆</span> Achievements</strong>
+      <span class="muted">What each achievement asks for, from boss kills to crafting everything, including the secret ones.</span>
+      <span class="muted" data-count="achievements"></span>
+    </a>
   </div>
 
   <h2>Save files</h2>
@@ -458,11 +440,13 @@
 </div>
 
 <div id="page-pinned" data-page-content="pinned" hidden>
+  <h1>Materials list</h1>
   <p class="subtitle">Pin recipes and buildings, then see everything you need to gather here.</p>
   <div id="pinnedOutput"></div>
 </div>
 
 <div id="page-saves" data-page-content="saves" hidden>
+<h1>Save File Parser</h1>
 <p class="subtitle">Drop a <span class="mono">.fch</span> character save file to inspect its contents. Parsing happens entirely in your browser.</p>
 
 <div id="dropzone">
@@ -490,13 +474,14 @@
 <div id="viewTabs" class="picker-bar" style="display:none;">
   <label>Tab</label>
   <button type="button" id="tabSingle" class="view-tab active">Single View</button>
+  <button type="button" id="tabAchievements" class="view-tab">Achievements</button>
   <button type="button" id="tabCompare" class="view-tab" disabled>Compare</button>
   <button type="button" id="tabPlayers" class="view-tab">Known Players</button>
   <button type="button" id="tabWorlds" class="view-tab">Known World Data</button>
+  <button type="button" id="clearKnownDataBtn" title="Forgets every remembered player name/Steam ID and World UID↔Name association — not the loaded files themselves.">Clear all stored data</button>
 </div>
 
 <div class="toprow">
-  <button id="clearKnownDataBtn" title="Forgets every remembered player name/Steam ID and World UID↔Name association — not the loaded files themselves.">Clear all stored data</button>
   <button id="resetBtn" style="display:none;">Clear all player files</button>
 </div>
 
@@ -506,6 +491,7 @@
 <div id="compareOutput" style="display:none;"></div>
 <div id="playersOutput" style="display:none;"></div>
 <div id="worldsOutput" style="display:none;"></div>
+<div id="achievementsOutput" style="display:none;"></div>
 
 
 <footer class="credits">
@@ -521,11 +507,17 @@
 </div>
 
 <div id="page-wiki" data-page-content="wiki" hidden>
-  <p class="subtitle" id="wikiSubtitle"></p>
+  <h1 id="wikiTitle"></h1>
+  <p id="wikiSubtitle"></p>
   <div id="wikiOutput"></div>
 </div>
 
-<footer id="buildInfo" class="build-info"></footer>
+</main>
+</div>
+<footer class="site-footer">
+  <p id="buildInfo" class="build-info"></p>
+  <p>Fan-made and not affiliated with Iron Gate AB.</p>
+</footer>
 
 <!-- ==================== HTML <template> fragments ====================
      Every repeated UI shape (a stat tile, a table row, a chip, a card...)
@@ -768,19 +760,7 @@
      scripts/vendor-cytoscape.js — runs automatically via `npm install`)
      rather than loaded from a CDN, so this page never depends on a
      third-party site to work. -->
-<script>
-// Header dropdown: click toggles the panel; outside click or Escape closes it.
-(function () {
-  const dropdowns = [...document.querySelectorAll(".nav-dropdown")]
-    .map((el) => ({ toggle: el.querySelector(".nav-dropdown-toggle"), panel: el.querySelector(".nav-dropdown-panel") }));
-  const setOpen = (d, open) => { d.panel.hidden = !open; d.toggle.setAttribute("aria-expanded", String(open)); };
-  const closeAll = () => dropdowns.forEach((d) => setOpen(d, false));
-  for (const d of dropdowns) d.toggle.addEventListener("click", () => { const o = d.panel.hidden; closeAll(); setOpen(d, o); });
-  for (const d of dropdowns) d.panel.addEventListener("click", (e) => { if (e.target.closest("a[href^='#']")) closeAll(); }); // in-page links navigate, so close behind them
-  document.addEventListener("click", (e) => { if (!dropdowns.some((d) => d.toggle.contains(e.target) || d.panel.contains(e.target))) closeAll(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
-})();
-</script>
+
 <script src="vendor/cytoscape.min.js"></script>
 <script>
 (function () {
@@ -1491,7 +1471,23 @@
     if (!gameData || typeof raw !== "string" || !raw) return null;
     const bare = raw.replace(/^\$/, "");
     const id = gameData.tokenIds[bare] || gameData.tokenIds[bare.toLowerCase()] || gameData.idsLower.get(bare.toLowerCase());
-    return id ? { page: gameData.pages[id], id } : null;
+    if (id) return { page: gameData.pages[id], id };
+    return loreTarget(bare.toLowerCase());
+  }
+
+  /**
+   * The Lore page entry for a text the save remembers: a tutorial by its short name ("stemple1") or any of its
+   * tokens, or a runestone's label/text token. Ids are the text token without a _label/_text/_topic suffix.
+   */
+  function loreTarget(bare) {
+    if (!gameData.tokens) return null;
+    const base = bare.replace(/_(label|text|topic|description)$/, "");
+    for (const id of [base, "tutorial_" + base, "lore_" + base]) {
+      if ((id.startsWith("tutorial_") && gameData.tokens[id + "_label"]) || (id.startsWith("lore_") && gameData.tokens[id]) || (id.startsWith("lore_") && gameData.tokens[id + "_text"])) {
+        return { page: "lore", id };
+      }
+    }
+    return null;
   }
 
   /**
@@ -2604,8 +2600,7 @@
       k => {
         const row = clone("tpl-row-textmap");
         const keyCell = row.querySelector(".cell-key");
-        keyCell.textContent = friendlyName(k);
-        if (friendlyName(k) !== k) keyCell.title = k;
+        setNameCell(keyCell, k);
         const valueCell = row.querySelector(".cell-value");
         valueCell.textContent = translateText(map[k]);
         valueCell.style.whiteSpace = "pre-wrap"; // runestone texts have line breaks
@@ -2925,6 +2920,7 @@
       return null;
     }
 
+    const themeVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     try {
       const cy = cytoscape({
         container,
@@ -2938,9 +2934,9 @@
         style: [
           { selector: "node", style: {
             "background-color": "#cbb999", "width": 8, "height": 8,
-            "label": "data(label)", "color": "#ece4d3", "font-size": 9,
+            "label": "data(label)", "color": themeVar("--fg") || "#ece4d3", "font-size": 9,
             "text-valign": "bottom", "text-margin-y": 4, "text-wrap": "none",
-            "border-width": 1, "border-color": "#16130f"
+            "border-width": 1, "border-color": themeVar("--bg") || "#16130f"
           } },
           { selector: 'node[kind = "home"]', style: { "background-color": "#c99a44", "shape": "star", "width": 16, "height": 16 } },
           { selector: 'node[kind = "spawn"]', style: { "background-color": "#6fa06a", "shape": "triangle", "width": 14, "height": 14 } },
@@ -4002,10 +3998,12 @@
   const tabCompareBtn = document.getElementById("tabCompare");
   const tabPlayersBtn = document.getElementById("tabPlayers");
   const tabWorldsBtn = document.getElementById("tabWorlds");
+  const tabAchievementsBtn = document.getElementById("tabAchievements");
   const outputEl = document.getElementById("output");
   const compareOutputEl = document.getElementById("compareOutput");
   const playersOutputEl = document.getElementById("playersOutput");
   const worldsOutputEl = document.getElementById("worldsOutput");
+  const achievementsOutputEl = document.getElementById("achievementsOutput");
 
   /**
    * @param {File} file
@@ -4206,6 +4204,199 @@
     renderActiveView();
   }
 
+  // ---- Achievement progress (Achievements tab) ----
+  // Compares the achievement requirements extracted from the game (data/achievements.json) with the stats in the
+  // loaded character. Stat counters are checked by their slot in the save's stats array; kills, crafts, pickups,
+  // foods eaten, pickables and pieces placed by their name in the matching count table.
+
+  let achievementData = null; // achievements.json, loaded the first time the tab is opened
+  let achievementLoadFailed = false;
+
+  async function loadAchievementData() {
+    try {
+      const res = await fetch("data/achievements.json");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      achievementData = (await res.json()).achievements;
+    } catch (err) {
+      achievementLoadFailed = true;
+    }
+    if (activeView === "achievements") renderAchievementsView();
+  }
+
+  /** Which count table of a stats block each trigger kind reads (enemy kills are group 0 of `enemyStats`). */
+  const ACHIEVEMENT_MAPS = {
+    enemyStats: block => block.enemyStats && block.enemyStats[0],
+    itemCraft: block => block.itemCraftStats,
+    itemPickup: block => block.itemPickupStats,
+    piecePlaced: block => block.piecesPlacedStats,
+    foodEaten: block => block.foodEatenStats,
+    pickable: block => block.pickableStats,
+  };
+
+  /**
+   * The stats block an achievement is judged against. Block 0 is the lifetime total; hard and normal difficulty
+   * achievements (difficulty requirement 6 and 7) are judged against the per-difficulty copy at that index when the
+   * file has one. That mapping is an assumption: only block 0 is verified, so the hard-mode ones are the least certain.
+   */
+  function statsBlockFor(result, difficulty) {
+    const blocks = (result.data && result.data.playerStats) || [];
+    return (difficulty > 1 && blocks[difficulty]) || blocks[0] || null;
+  }
+
+  const normalizeStatKey = key => String(key).replace(/^\$/, "").toLowerCase();
+
+  /**
+   * Works out how far along every achievement is for one parsed character.
+   * @returns {Map<string, {requirements: object[], fraction: number, done: boolean, unknown: boolean}>}
+   */
+  function computeAchievementProgress(achievements, result) {
+    const normalized = new Map(); // count table -> Map(normalized key -> value), built once per table
+    const valueOf = (kind, block, target) => {
+      if (kind === "stat") {
+        const v = block.stats && block.stats[target.index];
+        return typeof v === "number" ? v : null; // a save from an older game version has fewer stat slots
+      }
+      const table = ACHIEVEMENT_MAPS[kind] && ACHIEVEMENT_MAPS[kind](block);
+      if (!table) return null;
+      if (!normalized.has(table)) normalized.set(table, new Map(Object.entries(table).map(([k, v]) => [normalizeStatKey(k), v])));
+      return normalized.get(table).get(normalizeStatKey(target.name)) || 0;
+    };
+
+    const byId = new Map(achievements.map(a => [a.id, a]));
+    const progress = new Map();
+    const compute = (achievement, seen) => {
+      if (progress.has(achievement.id)) return progress.get(achievement.id);
+      const block = statsBlockFor(result, achievement.difficulty);
+      const requirements = [];
+      let unknown = !block;
+      for (const trigger of achievement.triggers) {
+        if (trigger.kind === "achievement") {
+          for (const id of trigger.achievements) {
+            const sub = byId.get(id);
+            if (!sub || seen.has(id)) { unknown = true; continue; }
+            const p = compute(sub, new Set([...seen, id]));
+            if (p.unknown) unknown = true;
+            requirements.push({ kind: "achievement", name: sub.name, achievementId: id, have: p.fraction, need: 1, done: p.done, fraction: p.fraction });
+          }
+          continue;
+        }
+        for (const target of trigger.targets) {
+          const have = block ? valueOf(trigger.kind, block, target) : null;
+          if (have === null) { unknown = true; continue; }
+          requirements.push({ kind: trigger.kind, name: target.name, have, need: target.amount, done: have >= target.amount, fraction: Math.min(1, have / (target.amount || 1)) });
+        }
+      }
+      const fraction = requirements.length ? requirements.reduce((sum, r) => sum + r.fraction, 0) / requirements.length : 0;
+      const outcome = { requirements, fraction, done: requirements.length > 0 && !unknown && requirements.every(r => r.done), unknown };
+      progress.set(achievement.id, outcome);
+      return outcome;
+    };
+    achievements.forEach(a => compute(a, new Set([a.id])));
+    return progress;
+  }
+
+  function renderAchievementsView() {
+    achievementsOutputEl.textContent = "";
+    const current = loadedCharacters.find(c => c.id === selectedCharacterId) || loadedCharacters[0];
+    const description = "How close the selected character is to each achievement, worked out from the stats in its save file.";
+    if (!current) {
+      achievementsOutputEl.appendChild(card("Achievements", undefined, empty("Load a character file to see how close it is to each achievement."), description));
+      return;
+    }
+    if (!achievementData) {
+      achievementsOutputEl.appendChild(card("Achievements", undefined, empty(achievementLoadFailed
+        ? "Couldn't load the achievement list. If you opened this page from a file:// path, serve it over http instead."
+        : "Loading..."), description));
+      if (!achievementLoadFailed) loadAchievementData();
+      return;
+    }
+
+    const progress = computeAchievementProgress(achievementData, current.result);
+    const checkable = achievementData.filter(a => !progress.get(a.id).unknown && progress.get(a.id).requirements.length);
+    const done = checkable.filter(a => progress.get(a.id).done);
+    const started = checkable.filter(a => !progress.get(a.id).done && progress.get(a.id).fraction > 0);
+    // Closest first: in-progress by how far along, then untouched ones, then the finished ones.
+    const rank = a => (progress.get(a.id).done ? 2 : progress.get(a.id).fraction > 0 ? 0 : 1);
+    const ordered = checkable.slice().sort((a, b) => rank(a) - rank(b) || progress.get(b.id).fraction - progress.get(a.id).fraction || a.name.localeCompare(b.name));
+
+    const body = document.createElement("div");
+    const summary = document.createElement("p");
+    summary.textContent = characterLabel(current) + ": " + done.length + " completed, " + started.length + " in progress, " + (checkable.length - done.length - started.length) + " not started" +
+      (achievementData.length > checkable.length ? ", " + (achievementData.length - checkable.length) + " that this save can't tell." : ".");
+    body.appendChild(summary);
+
+    body.appendChild(buildListView(
+      ordered,
+      a => a.name + " " + (a.description || ""),
+      () => {
+        const table = document.createElement("table");
+        const head = table.createTHead().insertRow();
+        for (const label of ["Achievement", "Progress", "Still needed"]) {
+          const th = document.createElement("th");
+          th.textContent = label;
+          head.appendChild(th);
+        }
+        return { root: table, appendTo: table.createTBody() };
+      },
+      a => {
+        const p = progress.get(a.id);
+        const tr = document.createElement("tr");
+        const nameCell = tr.insertCell();
+        nameCell.append(a.name);
+        if (a.description) {
+          const d = document.createElement("div");
+          d.className = "per-level";
+          d.textContent = a.description;
+          nameCell.appendChild(d);
+        }
+
+        const progressCell = tr.insertCell();
+        const wrap = document.createElement("div");
+        wrap.className = "level-wrap";
+        const barwrap = document.createElement("div");
+        barwrap.className = "barwrap";
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.width = Math.round(p.fraction * 100) + "%";
+        barwrap.appendChild(bar);
+        const text = document.createElement("span");
+        const doneCount = p.requirements.filter(r => r.done).length;
+        text.textContent = p.done ? "Done" : p.requirements.length > 1 ? doneCount + " of " + p.requirements.length + " (" + Math.round(p.fraction * 100) + "%)" : Math.round(p.fraction * 100) + "%";
+        wrap.append(barwrap, text);
+        progressCell.appendChild(wrap);
+
+        const needCell = tr.insertCell();
+        const missing = p.requirements.filter(r => !r.done).sort((x, y) => y.fraction - x.fraction);
+        const describeRequirement = r => {
+          const span = document.createElement("span");
+          if (r.kind === "stat") span.append(prettify(r.name));
+          else if (r.kind === "achievement") span.appendChild(wikiLink(r.name, "achievements", { id: r.achievementId }));
+          else setNameCell(span, r.name);
+          span.append(r.kind === "achievement" ? " (" + Math.round(r.fraction * 100) + "%)" : " " + fmtFloat(r.have, 0) + " / " + fmtFloat(r.need, 0));
+          return span;
+        };
+        const list = items => {
+          const wrapEl = document.createElement("span");
+          items.forEach((r, n) => { if (n) wrapEl.append(", "); wrapEl.appendChild(describeRequirement(r)); });
+          return wrapEl;
+        };
+        if (missing.length <= 4) {
+          needCell.appendChild(list(missing));
+        } else {
+          needCell.appendChild(list(missing.slice(0, 3)));
+          const details = document.createElement("details");
+          const summaryEl = document.createElement("summary");
+          summaryEl.textContent = "+" + (missing.length - 3) + " more";
+          details.append(summaryEl, list(missing.slice(3)));
+          needCell.appendChild(details);
+        }
+        return tr;
+      },
+      { searchPlaceholder: "Filter achievements…" }
+    ));
+    achievementsOutputEl.appendChild(card("Achievements", checkable.length, body, description + " Closest first."));
+  }
+
   /**
    * Shows whichever of Single View / Compare / Known Players `activeView`
    * currently is. Compare always covers every loaded character; falls
@@ -4218,8 +4409,12 @@
     compareOutputEl.style.display = "none";
     playersOutputEl.style.display = "none";
     worldsOutputEl.style.display = "none";
+    achievementsOutputEl.style.display = "none";
 
-    if (activeView === "compare") {
+    if (activeView === "achievements") {
+      achievementsOutputEl.style.display = "block";
+      renderAchievementsView();
+    } else if (activeView === "compare") {
       compareOutputEl.style.display = "block";
       renderComparison(loadedCharacters);
     } else if (activeView === "players") {
@@ -4239,6 +4434,7 @@
     tabCompareBtn.classList.toggle("active", activeView === "compare");
     tabPlayersBtn.classList.toggle("active", activeView === "players");
     tabWorldsBtn.classList.toggle("active", activeView === "worlds");
+    tabAchievementsBtn.classList.toggle("active", activeView === "achievements");
   }
 
   // ---- Wiki pages (recipes, items, buildings, creatures) ----
@@ -4549,7 +4745,7 @@
     out.textContent = "";
     if (shared) {
       const banner = document.createElement("div");
-      banner.className = "wiki-chip";
+      banner.className = "coverage-note";
       banner.append("This is a shared list; your own pins haven't changed. ");
       const save = document.createElement("button");
       save.type = "button";
@@ -4757,6 +4953,102 @@
   const damageAtLevel = (i, level) => sumAmounts(i.damage) + sumAmounts(i.damagePerLevel) * (level - 1);
   const num = v => (typeof v === "number" ? v : 0);
 
+  /**
+   * Builds the Lore page's rows from the game's English text: runestone and cave-painting lore
+   * (`lore_*`), the Hugin/Munin tutorials (`tutorial_*`) and the dreams you wake from (`dream_*`).
+   * A row's id is the localization token of its text, e.g. "lore_meadows_boartaming" or "tutorial_stemple1".
+   */
+  function buildLoreRows(tokens, sources) {
+    const rows = [];
+    const titleOf = (base, fallback) => tokens[base + "_label"] || tokens[base + "_topic"] || fallback;
+    // Which runestones/tablets hold each text: sources list their texts as "$lore_x" tokens.
+    const sourcesByText = new Map();
+    for (const source of sources) {
+      for (const token of source.texts) {
+        const id = token.replace(/^\$/, "").replace(/_text$/, "").toLowerCase();
+        if (!sourcesByText.has(id)) sourcesByText.set(id, []);
+        sourcesByText.get(id).push(source);
+      }
+    }
+    for (const key of Object.keys(tokens)) {
+      if (key.startsWith("tutorial_") && key.endsWith("_label")) {
+        const base = key.slice(0, -"_label".length);
+        rows.push({ id: base, kind: "Tutorial", title: tokens[key], topic: tokens[base + "_topic"] || "", text: tokens[base + "_text"] || "", where: [] });
+      } else if (key.startsWith("lore_") && !/_(label|description|topic)$/.test(key)) {
+        const base = key.replace(/_text$/, "");
+        if (key.endsWith("_text") && tokens[base]) continue; // the plain token is the row
+        const area = base.match(/^lore_([a-z]+)_random\d+$/);
+        rows.push({ id: base, kind: "Runestone", title: titleOf(base, area ? prettify(area[1]) + " runestone" : humanize(base.replace(/^lore_/, ""))), topic: "", text: tokens[key], where: sourcesByText.get(base.toLowerCase()) || [] });
+      } else if (key.startsWith("dream_")) {
+        rows.push({ id: key, kind: "Dream", title: humanize(key.replace(/^dream_/, "")), topic: "", text: tokens[key], where: [] });
+      }
+    }
+    // Vegvisirs carry no text: they pin a location (a boss altar, a place of mystery) on your map.
+    for (const source of sources.filter(s => s.kind === "Vegvisir")) {
+      const pins = (source.reveals || []).map(r => (r.pinName ? friendlyName(r.pinName) : locationName(r.location)));
+      rows.push({ id: source.id.toLowerCase(), kind: "Vegvisir", title: "Vegvisir: " + pins.join(", "), topic: "", text: "Shows the location of " + pins.join(", ") + " on your map.", where: [source] });
+    }
+    return rows.sort((a, b) => a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
+  }
+
+  /** Where lore comes from (runestones, rune tablets, vegvisirs and the locations that hold them), loaded with the Lore page. */
+  let loreSources = [];
+  async function loadLoreSources() {
+    try { loreSources = (await fetch("data/lore.json").then(r => r.json())).lore; } catch (err) { loreSources = []; }
+  }
+
+  /** "Mistlands_DvergrBossEntrance1" -> the game's own location name when it has one, else a readable guess. */
+  function locationName(name) {
+    const known = gameData && gameData.tokens["location_" + name.toLowerCase()];
+    return known || name.replace(/_/g, " ").replace(/([a-z])([A-Z0-9])/g, "$1 $2");
+  }
+
+  const biomeName = b => prettify(b).replace("Ash Lands", "Ashlands");
+
+  /** One line per source: "Rune tablet: Eikthyr's altar (Meadows, 3 per world)". */
+  function describeSource(source) {
+    const places = [];
+    for (const l of source.foundIn) {
+      const detail = [l.biomes.map(biomeName).join(" / "), l.quantity ? l.quantity + " per world" : ""].filter(Boolean).join(", ");
+      const text = locationName(l.name) + (detail ? " (" + detail + ")" : "");
+      if (!places.includes(text)) places.push(text);
+    }
+    const shown = places.slice(0, 4).join("; ") + (places.length > 4 ? "; +" + (places.length - 4) + " more" : "");
+    return source.kind + ": " + (shown || "location not found in the game data");
+  }
+
+  const TRIGGER_VERBS = { stat: "Reach", enemyStats: "Defeat", piecePlaced: "Place", itemPickup: "Pick up", itemCraft: "Craft", foodEaten: "Eat", pickable: "Pick", achievement: "Earn" };
+  let achievementNames = new Map();
+
+  /** Fills a table cell with an achievement's requirements, long lists tucked into a collapsed details element. */
+  function renderRequirements(td, achievement) {
+    for (const t of achievement.triggers) {
+      const block = document.createElement("div");
+      const parts = t.kind === "achievement"
+        ? t.achievements.map(id => { const a = wikiLink(achievementNames.get(id) || id, "achievements", { id }); return [a, ""]; })
+        : t.targets.map(x => {
+            const node = t.kind === "stat" ? document.createTextNode(prettify(x.name)) : (() => {
+              const holder = document.createElement("span");
+              setNameCell(holder, x.name);
+              return holder;
+            })();
+            return [node, t.kind === "stat" ? " ≥ " + x.amount : x.amount > 1 ? " × " + x.amount : ""];
+          });
+      const list = document.createElement("span");
+      parts.forEach(([node, suffix], n) => { if (n) list.append(", "); list.append(node, suffix); });
+      if (parts.length > 4) {
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = TRIGGER_VERBS[t.kind] + " all " + parts.length + (t.kind === "achievement" ? " achievements" : " of these");
+        details.append(summary, list);
+        block.appendChild(details);
+      } else {
+        block.append(TRIGGER_VERBS[t.kind] + ": ", list);
+      }
+      td.appendChild(block);
+    }
+  }
+
   const WIKI_PAGES = {
     recipes: {
       label: "Recipes",
@@ -4932,6 +5224,73 @@
         { label: "Effect", value: i => i.consumeEffect ? i.consumeEffect.name : "", render: (td, i) => { td.textContent = describeEffect(i.consumeEffect); } },
       ],
     },
+    lore: {
+      label: "Lore",
+      file: "names",
+      subtitle: "Runestone and cave-painting lore, vegvisirs, the tutorial pop-ups from Hugin and Munin, and the dreams you wake from, with where to find each runestone.",
+      rowId: r => r.id,
+      loadExtra: loadLoreSources,
+      rows: d => buildLoreRows(d.tokens, loreSources),
+      searchText: r => [r.title, r.topic, r.text, ...r.where.map(describeSource)].join(" "),
+      filters: [{ key: "kind", label: "All kinds", value: r => r.kind }],
+      columns: [
+        { label: "Title", value: r => r.title, render: (td, r) => {
+            td.textContent = r.title;
+            if (r.topic) {
+              const d = document.createElement("div");
+              d.className = "per-level";
+              d.textContent = r.topic;
+              td.appendChild(d);
+            }
+          } },
+        { label: "Kind", value: r => r.kind, render: (td, r) => { td.textContent = r.kind; } },
+        { label: "Text", render: (td, r) => {
+            td.textContent = r.text;
+            td.style.whiteSpace = "pre-wrap";
+            td.style.maxWidth = "42rem";
+          } },
+        { label: "Where to find it", value: r => r.where.length ? describeSource(r.where[0]) : "", render: (td, r) => {
+            r.where.forEach(source => {
+              const line = document.createElement("div");
+              line.className = "per-level";
+              line.textContent = describeSource(source);
+              td.appendChild(line);
+            });
+          } },
+      ],
+      note: "Text is shown exactly as the game's English text has it. Biome runestones pick one of their texts at random, so any of a biome's lore can be on any of its runestones.",
+    },
+    achievements: {
+      label: "Achievements",
+      file: "achievements",
+      subtitle: "What each achievement asks for. Secret ones are marked, and the long lists open up.",
+      rowId: a => a.id,
+      rows: d => {
+        achievementNames = new Map(d.achievements.map(a => [a.id, a.name]));
+        return d.achievements;
+      },
+      searchText: a => [a.name, a.description || "", ...a.triggers.flatMap(t => t.targets.map(x => friendlyName(x.name)))].join(" "),
+      filters: [{ key: "type", label: "All requirement types", value: a => a.triggers.length ? TRIGGER_VERBS[a.triggers[0].kind] : "Other" }],
+      columns: [
+        { label: "Achievement", value: a => a.name, render: (td, a) => {
+            td.textContent = a.name;
+            if (a.secret) {
+              const tag = document.createElement("span");
+              tag.className = "tag";
+              tag.textContent = "Secret";
+              td.append(" ", tag);
+            }
+            if (a.description) {
+              const d = document.createElement("div");
+              d.className = "per-level";
+              d.textContent = a.description;
+              td.appendChild(d);
+            }
+          } },
+        { label: "Requirements", value: a => a.triggers.reduce((n, t) => n + t.targets.length + (t.achievements ? t.achievements.length : 0), 0), render: renderRequirements },
+      ],
+      note: "Requirements are read from the game's achievement assets. Hard and normal difficulty variants share their list with the base achievement.",
+    },
     processing: {
       label: "Smelting & cooking",
       file: "conversions",
@@ -5038,6 +5397,7 @@
       return;
     }
     await gameDataReady; // item names for the filter tag
+    if (page.loadExtra) await page.loadExtra();
     if (page.needsIndexes) {
       try {
         const [recipes, conversions, pieces, creatures] = await Promise.all(
@@ -5074,16 +5434,21 @@
    */
   function buildWikiView(key, page, data) {
     const rows = page.rows(data);
-    const body = document.createElement("div");
+    const view = document.createElement("div");
+    view.className = "datatable";
 
     const controls = document.createElement("div");
-    controls.className = "wiki-filters";
+    controls.className = "datatable-controls";
     const search = document.createElement("input");
     search.type = "search";
-    search.placeholder = "Search";
+    search.className = "datatable-search";
+    search.placeholder = "Search " + page.label.toLowerCase() + "...";
+    search.setAttribute("aria-label", "Search " + page.label.toLowerCase());
     controls.appendChild(search);
     const selects = page.filters.map(f => {
       const select = document.createElement("select");
+      select.className = "datatable-filter-toggle";
+      select.setAttribute("aria-label", f.label);
       for (const label of [f.label, ...[...new Set(rows.map(f.value))].sort()]) {
         const opt = document.createElement("option");
         opt.value = label === f.label ? "" : label;
@@ -5094,13 +5459,15 @@
       return { select, filter: f };
     });
 
+    const chips = document.createElement("div");
+    chips.className = "datatable-active-filters";
     const tableHost = document.createElement("div");
-    tableHost.className = "wiki-table";
     const pager = document.createElement("div");
-    pager.className = "wiki-pager";
-    const idChip = document.createElement("div");
-    idChip.className = "wiki-chip";
-    body.append(controls, idChip, tableHost, pager);
+    pager.className = "datatable-pagination";
+    const note = document.createElement("p");
+    note.className = "wiki-note";
+    note.textContent = "Extracted from the game's own data" + (data.buildId ? " (Steam build " + data.buildId + ")" : "") + "." + (page.note ? " " + page.note : "");
+    view.append(controls, chips, tableHost, pager, note);
 
     const sortKey = col => col.label.toLowerCase().replace(/[^a-z]+/g, "");
     let sort = { index: -1, descending: false };
@@ -5153,38 +5520,49 @@
       writeUrl(push);
     }
 
-    function pagerButton(label, target, disabled) {
+    function navButton(label, target, disabled, title) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = label;
+      button.title = title;
       button.disabled = disabled;
       button.addEventListener("click", () => update(() => { pageNumber = target; }, { resetPage: false }));
       return button;
     }
 
     /** A removable tag ("Showing only: Iron Sword" / "Recipes using: Iron") while a link's filter is active. */
-    function drawIdChip(shown) {
-      idChip.textContent = "";
-      idChip.hidden = !idFilter && !refFilter;
-      if (idChip.hidden) return;
+    function drawChips(shown) {
+      chips.textContent = "";
+      if (!idFilter && !refFilter) return;
       const itemName = id => (gameData && gameData.prefabs[id]) || id;
-      const text = refFilter
+      const chip = document.createElement("span");
+      chip.className = "datatable-chip";
+      chip.append(refFilter
         ? refFilters[refFilter.key].label + ": " + itemName(refFilter.value)
-        : "Showing only: " + (shown.length ? page.columns.find(c => c.value).value(shown[0]) : idFilter); // first sortable column is the name
+        : "Showing only: " + (shown.length ? page.columns.find(c => c.value).value(shown[0]) : idFilter)); // first sortable column is the name
       const clear = document.createElement("button");
       clear.type = "button";
-      clear.textContent = "Show all ✕";
+      clear.textContent = "×";
+      clear.title = "Show all";
+      clear.setAttribute("aria-label", "Remove this filter");
       clear.addEventListener("click", () => update(() => { idFilter = ""; refFilter = null; }));
-      idChip.append(text + " ", clear);
+      chip.appendChild(clear);
+      chips.appendChild(chip);
     }
 
     function drawPager(total) {
       pager.textContent = "";
       const pages = Math.max(1, Math.ceil(total / pageSize));
-      const label = document.createElement("span");
-      label.className = "page-info";
-      label.textContent = "Page " + pageNumber + " of " + pages;
+      const info = document.createElement("span");
+      info.className = "datatable-info";
+      const first = total ? (pageNumber - 1) * pageSize + 1 : 0;
+      const last = Math.min(total, pageNumber * pageSize);
+      info.textContent = total
+        ? "Showing " + first + "–" + last + " of " + total + (total === rows.length ? "" : " (filtered from " + rows.length + ")") + " · page " + pageNumber + " of " + pages
+        : "No matches (" + rows.length + " total)";
       const sizeSelect = document.createElement("select");
+      sizeSelect.className = "datatable-filter-toggle";
+      sizeSelect.setAttribute("aria-label", "Rows per page");
       for (const size of WIKI_PAGE_SIZES) {
         const opt = document.createElement("option");
         opt.value = size;
@@ -5193,13 +5571,15 @@
         sizeSelect.appendChild(opt);
       }
       sizeSelect.addEventListener("change", () => update(() => { pageSize = Number(sizeSelect.value); }));
-      pager.append(
-        pagerButton("« First", 1, pageNumber <= 1),
-        pagerButton("‹ Prev", pageNumber - 1, pageNumber <= 1),
-        label,
-        pagerButton("Next ›", pageNumber + 1, pageNumber >= pages),
-        pagerButton("Last »", pages, pageNumber >= pages),
+      const nav = document.createElement("div");
+      nav.className = "datatable-nav";
+      nav.append(
+        navButton("«", 1, pageNumber <= 1, "First page"),
+        navButton("Prev", pageNumber - 1, pageNumber <= 1, "Previous page"),
+        navButton("Next", pageNumber + 1, pageNumber >= pages, "Next page"),
+        navButton("»", pages, pageNumber >= pages, "Last page"),
         sizeSelect);
+      pager.append(info, nav);
     }
 
     function draw() {
@@ -5220,8 +5600,7 @@
       }
 
       tableHost.textContent = "";
-      drawIdChip(shown);
-      count.textContent = "(" + shown.length + (shown.length === rows.length ? "" : " of " + rows.length) + ")";
+      drawChips(shown);
       pageNumber = Math.min(pageNumber, Math.max(1, Math.ceil(shown.length / pageSize)));
       drawPager(shown.length);
       if (!shown.length) {
@@ -5233,9 +5612,16 @@
       const headRow = table.createTHead().insertRow();
       page.columns.forEach((col, index) => {
         const th = document.createElement("th");
-        th.textContent = col.label + (sort.index === index ? (sort.descending ? " ▼" : " ▲") : "");
+        const label = document.createElement("span");
+        label.className = "datatable-th-label";
+        label.textContent = col.label;
+        th.appendChild(label);
         if (col.value) {
-          th.className = "sortable";
+          th.classList.add("datatable-sortable");
+          if (sort.index === index) {
+            th.classList.add("datatable-sorted");
+            th.dataset.sortDir = sort.descending ? "desc" : "asc";
+          }
           th.addEventListener("click", () => update(() => {
             sort = { index, descending: sort.index === index && !sort.descending };
           }));
@@ -5252,9 +5638,6 @@
     search.addEventListener("input", () => update(() => {}, { push: false })); // typing shouldn't flood history
     selects.forEach(({ select }) => select.addEventListener("change", () => update(() => {})));
 
-    const view = card(page.label, rows.length, body,
-      page.subtitle + " Extracted from the game's own data" + (data.buildId ? " (Steam build " + data.buildId + ")" : "") + "." + (page.note ? " " + page.note : ""));
-    const count = view.querySelector(".count");
     view.readUrl = readUrl;
     return view;
   }
@@ -5266,14 +5649,42 @@
   }
 
   let saveViewStale = false; // game data arrived while the save parser wasn't visible
+  const SITE_NAME = "Nf3t's Valhiem Tools";
 
   function showPage() {
     const page = currentPage();
     const container = page === "home" || page === "saves" || page === "pinned" ? page : "wiki";
     document.querySelectorAll("[data-page-content]").forEach(el => { el.hidden = el.dataset.pageContent !== container; });
-    document.querySelectorAll(".site-nav a").forEach(a => a.classList.toggle("active", a.dataset.page === page));
-    document.getElementById("gameDataToggle").classList.toggle("active", container === "wiki");
+
+    // Sidebar: mark the page you are on; on narrow screens the sidebar is a menu, so close it after navigating.
+    document.querySelectorAll(".wiki-sidebar a[data-page]").forEach(a => {
+      const here = a.dataset.page === page;
+      a.classList.toggle("current", here);
+      if (here) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    document.getElementById("wikiSidebar").classList.remove("open");
+    document.getElementById("wikiMenuToggle").setAttribute("aria-expanded", "false");
+
+    const title = page === "home" ? "" : page === "saves" ? "Save File Parser" : page === "pinned" ? "Materials list" : WIKI_PAGES[page].label;
+    document.title = title ? title + " - " + SITE_NAME : SITE_NAME;
+    const crumbs = document.getElementById("breadcrumb");
+    crumbs.hidden = !title;
+    crumbs.textContent = "";
+    if (title) {
+      const home = document.createElement("a");
+      home.href = "#/";
+      home.textContent = SITE_NAME;
+      const sep = document.createElement("span");
+      sep.className = "breadcrumb-sep";
+      sep.textContent = "/";
+      const current = document.createElement("span");
+      current.className = "breadcrumb-current";
+      current.textContent = title;
+      crumbs.append(home, sep, current);
+    }
+
     if (container === "wiki") {
+      document.getElementById("wikiTitle").textContent = WIKI_PAGES[page].label;
       document.getElementById("wikiSubtitle").textContent = WIKI_PAGES[page].subtitle;
       showWikiPage(page);
     } else if (page === "pinned") {
@@ -5284,6 +5695,85 @@
       renderActiveView();
     }
   }
+
+  // Narrow screens: the header's menu button opens the sidebar.
+  document.getElementById("wikiMenuToggle").addEventListener("click", () => {
+    const sidebar = document.getElementById("wikiSidebar");
+    const open = !sidebar.classList.contains("open");
+    sidebar.classList.toggle("open", open);
+    document.getElementById("wikiMenuToggle").setAttribute("aria-expanded", String(open));
+  });
+
+  // Header search: finds items, buildings and creatures by name (from names.json) and jumps to their entry.
+  (function setUpHeaderSearch() {
+    const form = document.getElementById("wikiSearchForm");
+    const input = document.getElementById("wikiSearch");
+    const list = document.getElementById("wikiSearchResults");
+    const KINDS = { items: "Item", buildings: "Building", creatures: "Creature" };
+    let active = -1;
+
+    const matches = () => {
+      const q = input.value.trim().toLowerCase();
+      if (!q || !gameData) return [];
+      const found = [];
+      for (const [id, name] of Object.entries(gameData.prefabs)) {
+        const at = name.toLowerCase().indexOf(q);
+        if (at >= 0) found.push({ id, name, page: gameData.pages[id], rank: at === 0 ? 0 : 1 });
+      }
+      return found.sort((a, b) => a.rank - b.rank || a.name.length - b.name.length || a.name.localeCompare(b.name)).slice(0, 10);
+    };
+
+    const render = () => {
+      const results = matches();
+      list.textContent = "";
+      active = -1;
+      list.hidden = !results.length;
+      for (const r of results) {
+        const li = document.createElement("li");
+        li.setAttribute("role", "option");
+        const a = document.createElement("a");
+        a.href = "#/" + r.page + "?" + new URLSearchParams({ id: r.id });
+        const name = document.createElement("span");
+        name.textContent = r.name;
+        const kind = document.createElement("span");
+        kind.className = "wiki-search-kind";
+        kind.textContent = KINDS[r.page] || r.page;
+        a.append(name, kind);
+        a.addEventListener("click", () => { list.hidden = true; input.value = ""; });
+        li.appendChild(a);
+        list.appendChild(li);
+      }
+    };
+
+    const move = delta => {
+      const items = [...list.children];
+      if (!items.length) return;
+      active = (active + delta + items.length) % items.length;
+      items.forEach((li, i) => li.classList.toggle("active", i === active));
+    };
+
+    input.addEventListener("input", render);
+    input.addEventListener("focus", render);
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+      else if (e.key === "Escape") { list.hidden = true; input.blur(); }
+    });
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const chosen = list.children[Math.max(active, 0)];
+      if (chosen) location.hash = chosen.querySelector("a").getAttribute("href");
+      else if (input.value.trim()) location.hash = "#/items?" + new URLSearchParams({ q: input.value.trim() });
+      list.hidden = true;
+      input.value = "";
+      input.blur();
+    });
+    document.addEventListener("click", e => { if (!form.contains(e.target)) list.hidden = true; });
+    document.addEventListener("keydown", e => {
+      if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); input.focus(); }
+    });
+  })();
+
   /** Fills the "N entries" line on each home-page card from the same data the pages use. */
   async function fillHomeCounts() {
     const files = {};
@@ -5295,6 +5785,7 @@
           const n = Object.keys(pins).length;
           el.textContent = n ? n + " pinned" : "Nothing pinned yet";
         } else {
+          if (WIKI_PAGES[key].loadExtra) await WIKI_PAGES[key].loadExtra();
           el.textContent = WIKI_PAGES[key].rows(await load(WIKI_PAGES[key].file)).length + " entries";
         }
       } catch (err) { /* offline or opened from file://: leave the count off */ }
@@ -5340,6 +5831,7 @@
   });
   tabPlayersBtn.addEventListener("click", () => { activeView = "players"; renderActiveView(); });
   tabWorldsBtn.addEventListener("click", () => { activeView = "worlds"; renderActiveView(); });
+  tabAchievementsBtn.addEventListener("click", () => { activeView = "achievements"; renderActiveView(); });
 
   // "Clear all player files": unloads every character AND deletes their
   // persisted copies — but deliberately leaves globalPlayerRegistry/

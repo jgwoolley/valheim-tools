@@ -52,6 +52,24 @@ sealed class GameEnums
 
     public bool Has(string enumName) => byType.ContainsKey(enumName);
 
+    /// <summary>Names of every set bit of a [Flags] enum value, e.g. Biome 513 -> Meadows, Mistlands.</summary>
+    public List<string> FlagNames(string enumName, int value)
+    {
+        var names = new List<string>();
+        if (!byType.TryGetValue(enumName, out var values))
+        {
+            return names;
+        }
+        foreach (var (bit, name) in values.OrderBy(v => v.Key))
+        {
+            if (bit != 0 && (value & bit) == bit)
+            {
+                names.Add(name);
+            }
+        }
+        return names;
+    }
+
     /// <summary>The name for a value, or the number itself if the enum or value is unknown.</summary>
     public string Name(string enumName, int value) =>
         byType.TryGetValue(enumName, out var values) && values.TryGetValue(value, out var name)

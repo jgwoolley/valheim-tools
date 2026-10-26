@@ -52,7 +52,7 @@ var targets =
 var names = new Dictionary<string, object?>
 {
     ["buildId"] = buildId,
-    ["tokens"] = ctx.TokensExcept("menu_", "settings_", "language_", "button_", "hud_", "loadscreen_", "inventory_"),
+    ["tokens"] = ctx.TokensExcept("menu_", "settings_", "language_", "button_", "loadscreen_", "inventory_"),
     // id -> English name, plus which wiki page ("items", "buildings", "creatures") an id belongs to
     ["prefabs"] = targets.GroupBy(t => t.Id).ToDictionary(g => g.Key, g => g.First().Name),
     ["pages"] = targets.GroupBy(t => t.Id).ToDictionary(g => g.Key, g => g.First().Page),
@@ -68,4 +68,6 @@ Write("items", items);
 Write("pieces", pieces);
 Write("creatures", creatures);
 Write("conversions", Conversions.Extract(ctx));
+Write("achievements", Achievements.Extract(ctx));
+Write("lore", Lore.Extract(ctx));
 return 0;

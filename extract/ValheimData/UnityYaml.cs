@@ -161,7 +161,8 @@ sealed class PrefabIndex
     public PrefabIndex(string assetsDir)
     {
         var metas = Directory.EnumerateFiles(assetsDir, "*.prefab.meta", SearchOption.AllDirectories)
-            .Concat(Directory.EnumerateFiles(Path.Combine(assetsDir, "GameElements"), "*.asset.meta", SearchOption.AllDirectories));
+            .Concat(Directory.EnumerateFiles(Path.Combine(assetsDir, "GameElements"), "*.asset.meta", SearchOption.AllDirectories))
+            .Concat(Directory.EnumerateFiles(Path.Combine(assetsDir, "Scripts", "gui", "Achievements"), "*.asset.meta", SearchOption.AllDirectories));
         foreach (var meta in metas)
         {
             foreach (var line in File.ReadLines(meta))

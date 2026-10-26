@@ -20,7 +20,7 @@ Pushing to `main` runs `.github/workflows/deploy.yml`, which builds and deploys 
 
 ## Project layout
 
-- `public/` — the actual site (everything that gets deployed)
+- `public/` — the actual site (everything that gets deployed). `public/wiki.css` is copied verbatim from the vintage-story-wiki project so both sites share one look; put this site's own rules in `index.html` so it can be re-copied when that design changes
 - `scripts/` — small Node scripts used by `npm install` / `npm run build`
 - `extract/` — scripts and a .NET project that pull recipes, items, buildings and creatures out of the game files into `public/data/` (see `extract/README.md`)
 - `.github/workflows/` — the GitHub Pages deploy pipeline
