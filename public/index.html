@@ -150,14 +150,14 @@
   .wiki-pager button:hover:not(:disabled), .wiki-pager select:hover { border-color: var(--accent); }
   .wiki-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
   .wiki-pager select { cursor: pointer; }
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
-  .menu-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem 1.4rem; }
-  .menu-card h2 { margin: 0 0 0.5rem; font-size: 1.15rem; }
-  .menu-card p { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
-  .menu-primary { border-color: var(--accent); }
-  .menu-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .menu-links a, .menu-links a:visited { background: var(--panel-alt); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.4rem 0.9rem; text-decoration: none; font-size: 0.9rem; }
-  .menu-links a:hover { border-color: var(--accent); color: var(--accent); }
+  #page-home h1 { font-size: 1.7rem; margin: 0 0 0.75rem; }
+  #page-home h2 { font-size: 1.2rem; margin: 1.75rem 0 0.5rem; }
+  .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 0.5rem; margin: 1rem 0; }
+  .grid-list a, .grid-list a:visited { display: block; padding: 0.6rem 0.85rem; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text); text-decoration: none; }
+  .grid-list a:hover { border-color: var(--accent); }
+  .grid-list a strong { display: block; }
+  .grid-list a span.muted { display: block; font-size: 0.82rem; margin-top: 0.15rem; color: var(--muted); }
+  .card-icon { display: inline-block; width: 1.4em; text-align: center; }
   #pinBadge { color: var(--accent); }
   .pin-btn { background: none; border: none; color: var(--accent); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 0.25rem; }
   .pinned-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
@@ -358,9 +358,11 @@
       <div class="nav-dropdown-panel" hidden>
         <a href="#/recipes" data-page="recipes">Recipes</a>
         <a href="#/items" data-page="items">Items</a>
+        <a href="#/weapons" data-page="weapons">Weapons</a>
         <a href="#/armor" data-page="armor">Armor</a>
         <a href="#/trinkets" data-page="trinkets">Trinkets</a>
         <a href="#/food" data-page="food">Food &amp; drink</a>
+        <a href="#/processing" data-page="processing">Smelting &amp; cooking</a>
         <a href="#/buildings" data-page="buildings">Buildings</a>
         <a href="#/creatures" data-page="creatures">Creatures</a>
       </div>
@@ -378,27 +380,80 @@
   </div>
 </header>
 <div id="page-home" data-page-content="home" hidden>
-  <p class="subtitle">Tools and reference data for Valheim.</p>
-  <div class="menu-grid">
-    <section class="menu-card menu-primary">
-      <h2>Game Info</h2>
-      <p>Look up every recipe, item, armor set, trinket, food, building and creature, all extracted from the game's own files. Pin recipes to get one combined list of the raw materials you need.</p>
-      <div class="menu-links">
-        <a href="#/recipes">Recipes</a>
-        <a href="#/items">Items</a>
-        <a href="#/armor">Armor</a>
-        <a href="#/trinkets">Trinkets</a>
-        <a href="#/food">Food &amp; drink</a>
-        <a href="#/buildings">Buildings</a>
-        <a href="#/creatures">Creatures</a>
-        <a href="#/pinned">Materials list</a>
-      </div>
-    </section>
-    <section class="menu-card">
-      <h2>Save File Parser</h2>
-      <p>Drop a <span class="mono">.fch</span> character file to inspect its inventory, skills, stats and map pins. Parsing happens entirely in your browser; nothing is uploaded.</p>
-      <div class="menu-links"><a href="#/saves">Open the parser</a></div>
-    </section>
+  <h1>Nf3t's Valheim Tools</h1>
+  <p>
+    A reference for Valheim built directly from the game's own data rather than hand-maintained, plus a
+    tool that reads your character save files. Everything runs in your browser.
+  </p>
+
+  <h2>Crafting</h2>
+  <div class="grid-list">
+    <a href="#/recipes">
+      <strong><span class="card-icon" aria-hidden="true">📜</span> Recipes</strong>
+      <span class="muted">Every crafting and cooking recipe, with the station and level it needs. Pin recipes to plan a build.</span>
+      <span class="muted" data-count="recipes"></span>
+    </a>
+    <a href="#/pinned">
+      <strong><span class="card-icon" aria-hidden="true">📌</span> Materials list</strong>
+      <span class="muted">Everything to gather for your pinned recipes and buildings, from smelting to fuel. Shareable by link.</span>
+      <span class="muted" data-count="pinned"></span>
+    </a>
+    <a href="#/processing">
+      <strong><span class="card-icon" aria-hidden="true">🔥</span> Smelting &amp; cooking</strong>
+      <span class="muted">What smelters, kilns, ovens and the fermenter turn each item into, and what fuel they burn.</span>
+      <span class="muted" data-count="processing"></span>
+    </a>
+    <a href="#/buildings">
+      <strong><span class="card-icon" aria-hidden="true">🏠</span> Buildings</strong>
+      <span class="muted">Everything the Hammer, Hoe, Cultivator and Serving Tray can place, and what it costs.</span>
+      <span class="muted" data-count="buildings"></span>
+    </a>
+  </div>
+
+  <h2>Items &amp; Gear</h2>
+  <div class="grid-list">
+    <a href="#/items">
+      <strong><span class="card-icon" aria-hidden="true">🎒</span> Items</strong>
+      <span class="muted">Weapons, tools, materials, trophies and everything else you can carry.</span>
+      <span class="muted" data-count="items"></span>
+    </a>
+    <a href="#/weapons">
+      <strong><span class="card-icon" aria-hidden="true">⚔️</span> Weapons</strong>
+      <span class="muted">Damage, stamina cost, block and knockback of every melee weapon, bow, staff and arrow.</span>
+      <span class="muted" data-count="weapons"></span>
+    </a>
+    <a href="#/armor">
+      <strong><span class="card-icon" aria-hidden="true">🛡️</span> Armor</strong>
+      <span class="muted">Armor value, set bonuses and resistances of every helmet, chest piece, legging and cape.</span>
+      <span class="muted" data-count="armor"></span>
+    </a>
+    <a href="#/trinkets">
+      <strong><span class="card-icon" aria-hidden="true">💍</span> Trinkets</strong>
+      <span class="muted">Charge needed and the effect each trinket unleashes.</span>
+      <span class="muted" data-count="trinkets"></span>
+    </a>
+    <a href="#/food">
+      <strong><span class="card-icon" aria-hidden="true">🍖</span> Food &amp; drink</strong>
+      <span class="muted">Health, stamina and eitr of every food, and what each mead and potion does.</span>
+      <span class="muted" data-count="food"></span>
+    </a>
+  </div>
+
+  <h2>World</h2>
+  <div class="grid-list">
+    <a href="#/creatures">
+      <strong><span class="card-icon" aria-hidden="true">🐗</span> Creatures</strong>
+      <span class="muted">Health, speed, attacks, resistances and drops of every animal, monster and boss.</span>
+      <span class="muted" data-count="creatures"></span>
+    </a>
+  </div>
+
+  <h2>Save files</h2>
+  <div class="grid-list">
+    <a href="#/saves">
+      <strong><span class="card-icon" aria-hidden="true">📂</span> Save File Parser</strong>
+      <span class="muted">Drop a .fch character file to inspect its inventory, skills, stats and map pins. Nothing is uploaded.</span>
+    </a>
   </div>
 </div>
 
@@ -1364,6 +1419,7 @@
   // re-resolves and re-renders once it arrives.
   /** @type {{tokens: Object<string,string>, prefabs: Object<string,string>, prefabsLower: Map<string,string>, idByHash: Map<number,string>, items: Map<string,object>}|null} */
   let gameData = null;
+  let gameDataReady = Promise.resolve(); // settles once names/items have loaded (or failed)
 
   async function loadGameData() {
     try {
@@ -1411,8 +1467,18 @@
       if (token) return token;
       const prefab = gameData.prefabsLower.get(bare.toLowerCase());
       if (prefab) return prefab;
+      // Tutorials are stored by short name ("stemple1"); their title is the "_label" token.
+      const tutorial = gameData.tokens["tutorial_" + bare.toLowerCase() + "_label"];
+      if (tutorial) return tutorial;
+      if (raw.includes("$")) return translateText(raw);
     }
     return humanize(raw);
+  }
+
+  /** Replaces every `$token` inside a longer text (e.g. a runestone's body) with its English text. */
+  function translateText(text) {
+    if (!gameData || typeof text !== "string") return text;
+    return text.replace(/\$(\w+)/g, (m, t) => gameData.tokens[t] || gameData.tokens[t.toLowerCase()] || m);
   }
 
   /**
@@ -2533,12 +2599,17 @@
     if (!keys.length) return empty("None recorded.");
     return buildListView(
       keys,
-      k => k + " " + map[k],
+      k => k + " " + friendlyName(k) + " " + translateText(map[k]),
       () => { const table = clone("tpl-table-textmap"); return { root: table, appendTo: table.querySelector("tbody") }; },
       k => {
         const row = clone("tpl-row-textmap");
-        row.querySelector(".cell-key").textContent = k;
-        row.querySelector(".cell-value").textContent = map[k];
+        const keyCell = row.querySelector(".cell-key");
+        keyCell.textContent = friendlyName(k);
+        if (friendlyName(k) !== k) keyCell.title = k;
+        const valueCell = row.querySelector(".cell-value");
+        valueCell.textContent = translateText(map[k]);
+        valueCell.style.whiteSpace = "pre-wrap"; // runestone texts have line breaks
+        if (translateText(map[k]) !== map[k]) valueCell.title = map[k];
         return row;
       },
       { searchPlaceholder: "Filter texts…" }
@@ -4197,9 +4268,11 @@
     return a;
   }
 
-  /** Ids of items that have a crafting recipe; filled in before item-based pages render (see needsRecipes). */
-  let craftableItemIds = new Set();
-  const INGREDIENT_TYPES = new Set(["Material", "Trophy", "Misc", "Consumable", "Ammo"]);
+  /**
+   * Which other pages mention each item, by game id, so item rows only link to pages that actually
+   * have something to show. Filled in before item-based pages render (see needsIndexes).
+   */
+  const itemLinks = { craftable: new Set(), madeInStation: new Set(), recipeIngredient: new Set(), stationInput: new Set(), buildingMaterial: new Set(), dropped: new Set() };
 
   /** Item name, muted description, and cross-links to where it's crafted, used and dropped. */
   function renderItemName(td, i) {
@@ -4211,9 +4284,12 @@
       td.appendChild(d);
     }
     const links = [];
-    if (craftableItemIds.has(i.id)) links.push(wikiLink("Recipe", "recipes", { id: i.id }));
-    if (INGREDIENT_TYPES.has(i.type)) links.push(wikiLink("Used in", "recipes", { q: i.name }));
-    if (i.type === "Trophy" || i.type === "Material") links.push(wikiLink("Dropped by", "creatures", { q: i.name }));
+    if (itemLinks.craftable.has(i.id)) links.push(wikiLink("Recipe", "recipes", { id: i.id }));
+    if (itemLinks.madeInStation.has(i.id)) links.push(wikiLink("Made in", "processing", { id: i.id }));
+    if (itemLinks.recipeIngredient.has(i.id)) links.push(wikiLink("Used in recipes", "recipes", { uses: i.id }));
+    if (itemLinks.buildingMaterial.has(i.id)) links.push(wikiLink("Used in buildings", "buildings", { uses: i.id }));
+    if (itemLinks.stationInput.has(i.id)) links.push(wikiLink("Smelted or cooked", "processing", { uses: i.id }));
+    if (itemLinks.dropped.has(i.id)) links.push(wikiLink("Dropped by", "creatures", { drop: i.id }));
     if (links.length) {
       const line = document.createElement("div");
       line.className = "per-level";
@@ -4262,6 +4338,7 @@
   // ---- Pinned recipes (kept in this browser's localStorage) ----
   const PINS_KEY = "valheim-tools.pinnedRecipes";
   const EXPAND_KEY = "valheim-tools.expandCrafted";
+  const SMELT_KEY = "valheim-tools.expandSmelting";
 
   /** @returns {Object<string,{qty: number, level: number}>} Pinned recipe id -> how many to make, and the quality level to make them at. */
   function loadPins() {
@@ -4333,28 +4410,51 @@
   /**
    * Adds the raw cost of making `count` of a recipe's item to `totals`.
    * Cost at quality level L is the base amount plus the per-level amount for each upgrade
-   * (amount + perLevel * (q - 1), summed for q = 1..L). With `expand`, ingredients that are
-   * themselves craftable are broken down into their own ingredients.
+   * (amount + perLevel * (q - 1), summed for q = 1..L). `plan` says how deep to go (see addNeed).
    */
-  function addRecipeCost(recipe, count, level, expand, byItem, totals, crafted, stations, path) {
+  function addRecipeCost(recipe, count, level, plan, acc, path) {
     const crafts = Math.ceil(count / recipe.amount);
-    if (recipe.station) {
-      const known = stations.get(recipe.station.id);
-      if (!known || known.level < recipe.minStationLevel) stations.set(recipe.station.id, { station: recipe.station, level: recipe.minStationLevel });
-    }
+    noteStation(acc.stations, recipe.station, recipe.minStationLevel);
     for (const res of recipe.resources) {
       if (res.upgraderResource) continue;
       let perCraft = 0;
       for (let q = 1; q <= level; q++) perCraft += res.amount + res.amountPerLevel * (q - 1);
-      const need = crafts * perCraft;
-      const sub = expand ? byItem.get(res.item.id) : null;
-      if (sub && !path.includes(sub.id)) {
-        crafted.set(res.item.id, { item: res.item, count: (crafted.get(res.item.id)?.count || 0) + need });
-        addRecipeCost(sub, need, 1, expand, byItem, totals, crafted, stations, [...path, sub.id]);
-      } else {
-        totals.set(res.item.id, { item: res.item, count: (totals.get(res.item.id)?.count || 0) + need });
-      }
+      addNeed(res.item, crafts * perCraft, plan, acc, path);
     }
+  }
+
+  function noteStation(stations, station, level) {
+    if (!station) return;
+    const known = stations.get(station.id);
+    if (!known || known.level < level) stations.set(station.id, { station, level });
+  }
+
+  /**
+   * Adds `need` of an item to the totals, first breaking it down through its crafting recipe
+   * (plan.expand), then through the smelter/kiln/etc that produces it (plan.smelt, which also
+   * counts the fuel). Anything with no further source ends up in `acc.totals` as a raw material.
+   * `plan.byItem` / `plan.byProduct` map an item id to its first recipe / conversion; `path`
+   * guards against cycles.
+   */
+  function addNeed(item, need, plan, acc, path) {
+    const bump = (map, extra = {}) => map.set(item.id, { item, count: (map.get(item.id)?.count || 0) + need, ...extra });
+    const recipe = plan.expand ? plan.byItem.get(item.id) : null;
+    if (recipe && !path.includes("r:" + recipe.id)) {
+      bump(acc.crafted);
+      addRecipeCost(recipe, need, 1, plan, acc, [...path, "r:" + recipe.id]);
+      return;
+    }
+    const conversion = plan.smelt ? plan.byProduct.get(item.id) : null;
+    if (conversion && !path.includes("c:" + item.id)) {
+      bump(acc.processed, { conversion });
+      noteStation(acc.stations, conversion.station, 1);
+      const runs = Math.ceil(need / conversion.amount);
+      const next = [...path, "c:" + item.id];
+      addNeed(conversion.from, runs, plan, acc, next);
+      if (conversion.fuel) addNeed(conversion.fuel.item, runs * conversion.fuel.amount, plan, acc, next);
+      return;
+    }
+    bump(acc.totals);
   }
 
   /** "Recipe_SwordIron*2*3" = recipe id, how many, quality level (level omitted when 1). */
@@ -4387,12 +4487,12 @@
     if (!pinData) {
       out.textContent = "Loading...";
       try {
-        const [recipes, pieces] = await Promise.all(["recipes", "pieces"].map(async f => {
+        const [recipes, pieces, conversions] = await Promise.all(["recipes", "pieces", "conversions"].map(async f => {
           const res = await fetch("data/" + f + ".json");
           if (!res.ok) throw new Error("HTTP " + res.status);
           return res.json();
         }));
-        pinData = { recipes: recipes.recipes, pieces: pieces.pieces };
+        pinData = { recipes: recipes.recipes, pieces: pieces.pieces, conversions: conversions.conversions };
       } catch (err) {
         out.textContent = "";
         out.appendChild(empty("Couldn't load recipes (" + err.message + "). If you opened this page from a file:// path, serve it over http instead."));
@@ -4422,10 +4522,17 @@
     }
     const working = () => shared || pins;
 
-    let expand = true;
-    if (params.has("expand")) expand = params.get("expand") !== "0";
-    else if (shared) expand = true;
-    else try { expand = localStorage.getItem(EXPAND_KEY) !== "0"; } catch (err) { /* default on */ }
+    // Both options default on; the URL wins, then (for your own list) the last choice you made here.
+    const readOption = (name, storageKey) => {
+      if (params.has(name)) return params.get(name) !== "0";
+      if (shared) return true;
+      try { return localStorage.getItem(storageKey) !== "0"; } catch (err) { return true; }
+    };
+    let expand = readOption("expand", EXPAND_KEY);
+    let smelt = readOption("smelt", SMELT_KEY);
+    // Several conversions can make the same item (iron from ore or from scrap); the first listed is used.
+    const byProduct = new Map();
+    for (const c of pinData.conversions) if (c.method !== "Cooking" && !byProduct.has(c.to.id)) byProduct.set(c.to.id, c);
 
     /** Saves the list (your pins only, not a shared list) and mirrors it into the address bar. */
     function persist() {
@@ -4433,6 +4540,7 @@
       const query = new URLSearchParams();
       for (const [id, pin] of Object.entries(working())) query.append("pin", serializePin(id, pin));
       if (!expand) query.set("expand", "0");
+      if (!smelt) query.set("smelt", "0");
       const hash = "#/pinned" + (query.toString() ? "?" + query : "");
       if (hash !== location.hash) history.replaceState(null, "", hash);
     }
@@ -4468,10 +4576,12 @@
 
     function drawTotals() {
       totalsHost.textContent = "";
-      const totals = new Map(), crafted = new Map(), stations = new Map();
+      const acc = { totals: new Map(), crafted: new Map(), processed: new Map(), stations: new Map() };
+      const plan = { expand, smelt, byItem, byProduct };
       for (const [id, pin] of Object.entries(working())) {
-        addRecipeCost(byId.get(id), pin.qty * byId.get(id).amount, pin.level, expand, byItem, totals, crafted, stations, [id]);
+        addRecipeCost(byId.get(id), pin.qty * byId.get(id).amount, pin.level, plan, acc, ["r:" + id]);
       }
+      const { totals, crafted, processed, stations } = acc;
 
       const materials = [...totals.values()].sort((a, b) => a.item.name.localeCompare(b.item.name));
       const table = document.createElement("table");
@@ -4499,13 +4609,19 @@
           if (level > 1) notes.append(" (level " + level + ")");
         });
       }
-      if (crafted.size) {
-        if (stations.size) notes.appendChild(document.createElement("br"));
-        notes.append("Crafted along the way: " + [...crafted.values()].map(c => c.count + " " + c.item.name).join(", "));
+      const steps = [];
+      if (crafted.size) steps.push("Crafted along the way: " + [...crafted.values()].map(c => c.count + " " + c.item.name).join(", "));
+      if (processed.size) {
+        steps.push("Made in a smelter, kiln or similar: " + [...processed.values()].map(p =>
+          p.count + " " + p.item.name + " (from " + p.conversion.from.name + " in the " + p.conversion.station.name + ")").join(", "));
       }
+      steps.forEach((text, n) => {
+        if (n || stations.size) notes.appendChild(document.createElement("br"));
+        notes.append(text);
+      });
       section.appendChild(notes);
       totalsHost.appendChild(card("Raw materials", materials.length, section,
-        "Everything to gather for the pinned recipes below" + (expand ? ", with crafted ingredients broken down into their own materials." : ", exactly as the recipes list them.")));
+        "Everything to gather for the pinned recipes below" + (expand || smelt ? ", broken down into the raw materials to gather." : ", exactly as the recipes list them.")));
     }
 
     function drawPinned() {
@@ -4520,9 +4636,22 @@
         expand = checkbox.checked;
         if (!shared) try { localStorage.setItem(EXPAND_KEY, expand ? "1" : "0"); } catch (err) { /* not persisted */ }
         persist();
+        shareLink.value = location.href;
         drawTotals();
       });
       label.append(checkbox, " Break crafted ingredients (like Iron Nails) down into raw materials");
+      const smeltLabel = document.createElement("label");
+      const smeltBox = document.createElement("input");
+      smeltBox.type = "checkbox";
+      smeltBox.checked = smelt;
+      smeltBox.addEventListener("change", () => {
+        smelt = smeltBox.checked;
+        if (!shared) try { localStorage.setItem(SMELT_KEY, smelt ? "1" : "0"); } catch (err) { /* not persisted */ }
+        persist();
+        shareLink.value = location.href;
+        drawTotals();
+      });
+      smeltLabel.append(smeltBox, " Include smelting and refining (ore to metal, wood to coal, with fuel)");
       const clear = document.createElement("button");
       clear.type = "button";
       clear.textContent = "Unpin all";
@@ -4547,7 +4676,7 @@
         }
         setTimeout(() => { copy.textContent = "Copy share link"; }, 2000);
       });
-      controls.append(label, clear, shareLink, copy);
+      controls.append(label, smeltLabel, clear, shareLink, copy);
 
       const table = document.createElement("table");
       table.className = "pinned-table";
@@ -4621,6 +4750,11 @@
   }
 
   const ARMOR_TYPES = ["Helmet", "Chest", "Legs", "Shoulder", "Utility"];
+  const WEAPON_TYPES = ["OneHandedWeapon", "TwoHandedWeapon", "TwoHandedWeaponLeft", "Bow"];
+  /** Combat damage only: chop and pickaxe damage is for trees and rocks, so it's left out of totals (the breakdown still lists it). */
+  const sumAmounts = amounts => Object.entries(amounts || {}).filter(([k]) => k !== "chop" && k !== "pickaxe").reduce((a, [, v]) => a + v, 0);
+  /** Total damage at a quality level (1 = as crafted): the base plus the per-level gain for each upgrade. */
+  const damageAtLevel = (i, level) => sumAmounts(i.damage) + sumAmounts(i.damagePerLevel) * (level - 1);
   const num = v => (typeof v === "number" ? v : 0);
 
   const WIKI_PAGES = {
@@ -4629,8 +4763,9 @@
       file: "recipes",
       subtitle: "Crafting and cooking recipes.",
       rowId: r => r.item.id,
+      refFilters: { uses: { label: "Recipes using", test: (r, id) => r.resources.some(x => x.item.id === id) } },
       rows: d => d.recipes.filter(r => r.enabled),
-      searchText: r => [r.item.name, ...r.resources.map(x => x.item.name)].join(" "),
+      searchText: r => [r.item.name, ...r.resources.map(x => x.item.name)].join(" "), // includes upgrade idols
       filters: [{ key: "station", label: "All stations", value: r => r.station ? r.station.name : "Hand-crafted" }],
       columns: [
         { label: "Pin", render: (td, r) => renderPinButton(td, r.id) },
@@ -4644,7 +4779,22 @@
             td.appendChild(wikiLink(r.station.name, "buildings", { id: r.station.id }));
             if (r.minStationLevel > 1) td.append(" (lvl " + r.minStationLevel + ")");
           } },
-        { label: "Ingredients", render: (td, r) => renderIngredients(td, r.resources.filter(x => !x.upgraderResource)) },
+        { label: "Ingredients", render: (td, r) => {
+            renderIngredients(td, r.resources.filter(x => !x.upgraderResource));
+            // Gear upgrades need an idol on top of the per-level materials; it isn't used up making the base item.
+            const upgrade = r.resources.filter(x => x.upgraderResource);
+            if (upgrade.length) {
+              const line = document.createElement("div");
+              line.className = "per-level";
+              line.append("To upgrade: ");
+              upgrade.forEach((x, n) => {
+                if (n) line.append(", ");
+                line.append(x.amount + " ");
+                line.appendChild(wikiLink(x.item.name, "items", { id: x.item.id }));
+              });
+              td.appendChild(line);
+            }
+          } },
       ],
       note: "The per-level amount is added for each upgrade level of the item. Pin recipes (☆) to build a combined materials list. Buildings can be pinned too.",
     },
@@ -4653,7 +4803,7 @@
       file: "items",
       subtitle: "Weapons, armor, food, materials, trophies and everything else you can carry.",
       rowId: i => i.id,
-      needsRecipes: true,
+      needsIndexes: true,
       rows: d => d.items,
       searchText: i => i.name + " " + i.id + " " + (i.description || ""),
       filters: [{ key: "type", label: "All types", value: i => prettify(i.type) }],
@@ -4665,12 +4815,59 @@
         { label: "Stack", value: i => i.maxStack, render: (td, i) => { td.textContent = i.maxStack; } },
       ],
     },
+    weapons: {
+      label: "Weapons",
+      file: "items",
+      subtitle: "Melee weapons, bows, crossbows, magic staves and ammunition, with damage, stamina cost and block stats.",
+      rowId: i => i.id,
+      needsIndexes: true,
+      rows: d => d.items.filter(i => WEAPON_TYPES.includes(i.type) || (i.type === "Ammo" && i.damage)),
+      searchText: i => i.name + " " + i.id + " " + (i.skill || "") + " " + (i.description || ""),
+      filters: [
+        { key: "type", label: "All types", value: i => prettify(i.type) },
+        { key: "skill", label: "All skills", value: i => i.skill ? prettify(i.skill) : "(None)" },
+      ],
+      columns: [
+        { label: "Name", value: i => i.name, render: renderItemName },
+        { label: "Type", value: i => prettify(i.type), render: (td, i) => { td.textContent = prettify(i.type) + (i.skill ? " (" + prettify(i.skill) + ")" : ""); } },
+        { label: "Damage", value: i => sumAmounts(i.damage), render: (td, i) => {
+            td.textContent = sumAmounts(i.damage) ? String(sumAmounts(i.damage)) : "";
+            const d = document.createElement("div");
+            d.className = "per-level";
+            d.textContent = describeAmounts(i.damage, i.damagePerLevel);
+            td.appendChild(d);
+          } },
+        { label: "At max level", value: i => damageAtLevel(i, i.maxQuality), render: (td, i) => {
+            td.textContent = i.maxQuality > 1 && sumAmounts(i.damagePerLevel) ? damageAtLevel(i, i.maxQuality) + " (lvl " + i.maxQuality + ")" : "";
+          } },
+        { label: "Block", value: i => num(i.blockPower), render: (td, i) => {
+            td.textContent = i.blockPower ? String(i.blockPower) : "";
+            if (i.parryBonus && i.blockPower) {
+              const d = document.createElement("div");
+              d.className = "per-level";
+              d.textContent = "parry ×" + i.parryBonus;
+              td.appendChild(d);
+            }
+          } },
+        { label: "Stamina", value: i => num(i.attackStamina) || num(i.secondaryAttackStamina), render: (td, i) => {
+            if (!i.attackStamina && !i.secondaryAttackStamina && !i.attackEitr) return;
+            td.textContent = [i.attackStamina, i.secondaryAttackStamina].map(v => v || "–").join(" / ");
+            if (i.attackEitr) td.append(" · " + i.attackEitr + " eitr");
+          } },
+        { label: "Knockback", value: i => num(i.knockback), render: (td, i) => { td.textContent = i.knockback || ""; } },
+        { label: "Backstab", value: i => num(i.backstabBonus), render: (td, i) => { td.textContent = i.backstabBonus ? "×" + i.backstabBonus : ""; } },
+        { label: "Tier", value: i => num(i.toolTier), render: (td, i) => { td.textContent = i.toolTier || ""; } },
+        { label: "Durability", value: i => num(i.maxDurability), render: (td, i) => { td.textContent = i.maxDurability || ""; } },
+        { label: "Weight", value: i => i.weight, render: (td, i) => { td.textContent = i.weight; } },
+      ],
+      note: "Damage totals leave out chop and pickaxe damage (that is for trees and rocks); the breakdown below it lists everything. Stamina shows the normal attack / the secondary attack. Tier is the mining and chopping tier.",
+    },
     armor: {
       label: "Armor",
       file: "items",
       subtitle: "Helmets, chest pieces, leggings, capes and utility items, with set bonuses and resistances.",
       rowId: i => i.id,
-      needsRecipes: true,
+      needsIndexes: true,
       rows: d => d.items.filter(i => ARMOR_TYPES.includes(i.type)),
       searchText: i => i.name + " " + i.id + " " + (i.set || "") + " " + (i.description || ""),
       filters: [
@@ -4700,7 +4897,7 @@
       file: "items",
       subtitle: "Trinkets charge up as you fight, then unleash their effect.",
       rowId: i => i.id,
-      needsRecipes: true,
+      needsIndexes: true,
       rows: d => d.items.filter(i => i.type === "Trinket"),
       searchText: i => i.name + " " + i.id + " " + (i.description || "") + " " + describeEffect(i.adrenalineEffect),
       filters: [],
@@ -4717,7 +4914,7 @@
       file: "items",
       subtitle: "Food gives health, stamina and eitr for a while; meads and potions give a status effect instead.",
       rowId: i => i.id,
-      needsRecipes: true,
+      needsIndexes: true,
       rows: d => d.items.filter(i => i.food || i.consumeEffect),
       searchText: i => i.name + " " + i.id + " " + (i.description || "") + " " + describeEffect(i.consumeEffect),
       filters: [{ key: "kind", label: "Food and drink", value: i => i.food ? "Food" : "Meads & potions" }],
@@ -4735,11 +4932,41 @@
         { label: "Effect", value: i => i.consumeEffect ? i.consumeEffect.name : "", render: (td, i) => { td.textContent = describeEffect(i.consumeEffect); } },
       ],
     },
+    processing: {
+      label: "Smelting & cooking",
+      file: "conversions",
+      subtitle: "What smelters, kilns, cooking stations, the fermenter and other stations turn one item into.",
+      rowId: c => c.to.id,
+      refFilters: { uses: { label: "Stations taking", test: (c, id) => c.from.id === id || (c.fuel && c.fuel.item.id === id) } },
+      rows: d => d.conversions,
+      searchText: c => [c.from.name, c.to.name, c.station.name, c.method].join(" "),
+      filters: [
+        { key: "method", label: "All methods", value: c => c.method },
+        { key: "station", label: "All stations", value: c => c.station.name },
+      ],
+      columns: [
+        { label: "Station", value: c => c.station.name, render: (td, c) => td.appendChild(wikiLink(c.station.name, "buildings", { id: c.station.id })) },
+        { label: "Method", value: c => c.method, render: (td, c) => { td.textContent = c.method; } },
+        { label: "Input", value: c => c.from.name, render: (td, c) => td.appendChild(wikiLink(c.from.name, "items", { id: c.from.id })) },
+        { label: "Output", value: c => c.to.name, render: (td, c) => {
+            td.appendChild(wikiLink(c.to.name, "items", { id: c.to.id }));
+            if (c.amount > 1) td.append(" ×" + c.amount);
+          } },
+        { label: "Time", value: c => c.seconds, render: (td, c) => { td.textContent = c.seconds >= 120 ? Math.round(c.seconds / 60) + " min" : c.seconds + " s"; } },
+        { label: "Fuel", render: (td, c) => {
+            if (!c.fuel) return;
+            td.append(c.fuel.amount + " ");
+            td.appendChild(wikiLink(c.fuel.item.name, "items", { id: c.fuel.item.id }));
+          } },
+      ],
+      note: "Time is per item (per batch for the fermenter). Fuel is used per item made.",
+    },
     buildings: {
       label: "Buildings",
       file: "pieces",
       subtitle: "Everything the Hammer, Hoe, Cultivator and Serving Tray can place.",
       rowId: p => p.id,
+      refFilters: { uses: { label: "Buildings needing", test: (p, id) => p.resources.some(x => x.item.id === id) } },
       rows: d => d.pieces,
       searchText: p => p.name + " " + p.id + " " + (p.description || "") + " " + p.resources.map(x => x.item.name).join(" "),
       filters: [
@@ -4763,6 +4990,7 @@
       file: "creatures",
       subtitle: "Animals, monsters and bosses with their base (level 1) stats, drops and damage resistances.",
       rowId: c => c.id,
+      refFilters: { drop: { label: "Creatures dropping", test: (c, id) => (c.drops || []).some(d => d.item.id === id) } },
       rows: d => d.creatures,
       searchText: c => c.name + " " + c.id + " " + (c.drops || []).map(x => x.item.name).join(" "),
       filters: [{ key: "faction", label: "All factions", value: c => prettify(c.faction) }],
@@ -4809,11 +5037,19 @@
       wikiOutputEl.appendChild(empty("Couldn't load " + page.label.toLowerCase() + " (" + err.message + "). If you opened this page from a file:// path, serve it over http instead."));
       return;
     }
-    if (page.needsRecipes) {
+    await gameDataReady; // item names for the filter tag
+    if (page.needsIndexes) {
       try {
-        const res = await fetch("data/recipes.json");
-        if (res.ok) craftableItemIds = new Set((await res.json()).recipes.filter(r => r.enabled).map(r => r.item.id));
-      } catch (err) { /* just no "Recipe" links */ }
+        const [recipes, conversions, pieces, creatures] = await Promise.all(
+          ["recipes", "conversions", "pieces", "creatures"].map(f => fetch("data/" + f + ".json").then(r => r.json())));
+        const enabled = recipes.recipes.filter(r => r.enabled);
+        itemLinks.craftable = new Set(enabled.map(r => r.item.id));
+        itemLinks.recipeIngredient = new Set(enabled.flatMap(r => r.resources.map(x => x.item.id)));
+        itemLinks.madeInStation = new Set(conversions.conversions.map(c => c.to.id));
+        itemLinks.stationInput = new Set(conversions.conversions.flatMap(c => c.fuel ? [c.from.id, c.fuel.item.id] : [c.from.id]));
+        itemLinks.buildingMaterial = new Set(pieces.pieces.flatMap(p => p.resources.map(x => x.item.id)));
+        itemLinks.dropped = new Set(creatures.creatures.flatMap(c => (c.drops || []).map(d => d.item.id)));
+      } catch (err) { /* just fewer cross-links */ }
     }
     wikiViews[key] = buildWikiView(key, page, data);
     if (currentPage() === key) {
@@ -4869,6 +5105,8 @@
     const sortKey = col => col.label.toLowerCase().replace(/[^a-z]+/g, "");
     let sort = { index: -1, descending: false };
     let idFilter = ""; // exact row id, set by links from other pages (?id=SwordIron)
+    let refFilter = null; // {key, value}: rows that mention an item id, e.g. ?uses=IronOre or ?drop=TrophyBoar
+    const refFilters = page.refFilters || {};
     let pageNumber = 1;
     let pageSize = WIKI_PAGE_SIZES[0];
 
@@ -4877,6 +5115,8 @@
       const params = routeParams();
       search.value = params.get("q") || "";
       idFilter = params.get("id") || "";
+      const refKey = Object.keys(refFilters).find(k => params.has(k));
+      refFilter = refKey ? { key: refKey, value: params.get(refKey) } : null;
       for (const { select, filter } of selects) {
         const wanted = params.get(filter.key) || "";
         select.value = [...select.options].some(o => o.value === wanted) ? wanted : "";
@@ -4891,6 +5131,7 @@
     function writeUrl(push) {
       const params = new URLSearchParams();
       if (idFilter) params.set("id", idFilter);
+      if (refFilter) params.set(refFilter.key, refFilter.value);
       if (search.value.trim()) params.set("q", search.value.trim());
       for (const { select, filter } of selects) if (select.value) params.set(filter.key, select.value);
       if (sort.index >= 0) {
@@ -4921,17 +5162,20 @@
       return button;
     }
 
-    /** A removable "Showing only: Iron Sword" tag while an id filter from a link is active. */
+    /** A removable tag ("Showing only: Iron Sword" / "Recipes using: Iron") while a link's filter is active. */
     function drawIdChip(shown) {
       idChip.textContent = "";
-      idChip.hidden = !idFilter;
-      if (!idFilter) return;
-      const label = shown.length ? page.columns.find(c => c.value).value(shown[0]) : idFilter; // first sortable column is the name
+      idChip.hidden = !idFilter && !refFilter;
+      if (idChip.hidden) return;
+      const itemName = id => (gameData && gameData.prefabs[id]) || id;
+      const text = refFilter
+        ? refFilters[refFilter.key].label + ": " + itemName(refFilter.value)
+        : "Showing only: " + (shown.length ? page.columns.find(c => c.value).value(shown[0]) : idFilter); // first sortable column is the name
       const clear = document.createElement("button");
       clear.type = "button";
       clear.textContent = "Show all ✕";
-      clear.addEventListener("click", () => update(() => { idFilter = ""; }));
-      idChip.append("Showing only: " + label + " ", clear);
+      clear.addEventListener("click", () => update(() => { idFilter = ""; refFilter = null; }));
+      idChip.append(text + " ", clear);
     }
 
     function drawPager(total) {
@@ -4962,6 +5206,7 @@
       const q = search.value.trim().toLowerCase();
       let shown = rows.filter(r =>
         (!idFilter || page.rowId(r) === idFilter) &&
+        (!refFilter || refFilters[refFilter.key].test(r, refFilter.value)) &&
         selects.every(({ select, filter }) => !select.value || filter.value(r) === select.value) &&
         (!q || page.searchText(r).toLowerCase().includes(q)));
 
@@ -5039,10 +5284,28 @@
       renderActiveView();
     }
   }
+  /** Fills the "N entries" line on each home-page card from the same data the pages use. */
+  async function fillHomeCounts() {
+    const files = {};
+    const load = file => files[file] || (files[file] = fetch("data/" + file + ".json").then(r => r.json()));
+    for (const el of document.querySelectorAll("[data-count]")) {
+      const key = el.dataset.count;
+      try {
+        if (key === "pinned") {
+          const n = Object.keys(pins).length;
+          el.textContent = n ? n + " pinned" : "Nothing pinned yet";
+        } else {
+          el.textContent = WIKI_PAGES[key].rows(await load(WIKI_PAGES[key].file)).length + " entries";
+        }
+      } catch (err) { /* offline or opened from file://: leave the count off */ }
+    }
+  }
+
   window.addEventListener("hashchange", showPage);
   updatePinBadge();
   showPage();
-  loadGameData();
+  gameDataReady = loadGameData();
+  fillHomeCounts();
 
   dropzone.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", e => { if (e.target.files.length) handleFiles(e.target.files); });

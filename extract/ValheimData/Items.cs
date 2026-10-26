@@ -65,7 +65,13 @@ static class Items
                 itemType == "Consumable" ? ctx.ResolveStatusEffect(shared["m_consumeStatusEffect"]) : null,
                 itemType == "Trinket" ? Positive(shared["m_maxAdrenaline"].Num) : null,
                 itemType == "Trinket" ? ctx.ResolveStatusEffect(shared["m_fullAdrenalineSE"]) : null,
-                isArmor ? Resistances(ctx, shared["m_damageModifiers"]) : null));
+                isArmor ? Resistances(ctx, shared["m_damageModifiers"]) : null,
+                isWeapon ? Positive(shared["m_attack"]["m_attackStamina"].Num) : null,
+                isWeapon ? Positive(shared["m_secondaryAttack"]["m_attackStamina"].Num) : null,
+                isWeapon ? Positive(shared["m_attack"]["m_attackEitr"].Num) : null,
+                isWeapon ? Positive(shared["m_attackForce"].Num) : null,
+                isWeapon ? Positive(shared["m_backstabBonus"].Num) : null,
+                isWeapon ? Positive(shared["m_timedBlockBonus"].Num) : null));
         }
         return items;
     }
@@ -117,4 +123,10 @@ record Item(
     StatusEffect? ConsumeEffect,
     double? Adrenaline,
     StatusEffect? AdrenalineEffect,
-    Dictionary<string, string>? Resistances);
+    Dictionary<string, string>? Resistances,
+    double? AttackStamina,
+    double? SecondaryAttackStamina,
+    double? AttackEitr,
+    double? Knockback,
+    double? BackstabBonus,
+    double? ParryBonus);

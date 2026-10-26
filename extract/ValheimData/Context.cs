@@ -81,9 +81,9 @@ sealed class Context
             effect["m_ttl"].Num is > 0 and var ttl ? ttl : null);
     }
 
-    /// <summary>English text for every localization key starting with one of the given prefixes (without the `$`).</summary>
-    public Dictionary<string, string> Tokens(params string[] prefixes) =>
-        localization.Where(e => prefixes.Any(p => e.Key.StartsWith(p, StringComparison.Ordinal)))
+    /// <summary>English text for every localization key (without the `$`) except those starting with one of the given prefixes.</summary>
+    public Dictionary<string, string> TokensExcept(params string[] excludedPrefixes) =>
+        localization.Where(e => !excludedPrefixes.Any(p => e.Key.StartsWith(p, StringComparison.Ordinal)))
             .OrderBy(e => e.Key, StringComparer.Ordinal)
             .ToDictionary(e => e.Key, e => e.Value);
 

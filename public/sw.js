@@ -6,7 +6,7 @@
 // README.md for how to serve it locally if you want installability/
 // offline support to actually work.
 
-const CACHE_NAME = "valheim-viewer-v14";
+const CACHE_NAME = "valheim-viewer-v20";
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon.svg", "./vendor/cytoscape.min.js"];
 
 self.addEventListener("install", (event) => {
